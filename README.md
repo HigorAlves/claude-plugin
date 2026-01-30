@@ -1,23 +1,69 @@
-# Claude Helpers Marketplace
+# Novac Stack
 
 A collection of productivity plugins for Claude Code - code review, PR management, feature development, and plugin creation tools.
 
 ## Installation
 
-Add the marketplace to Claude Code:
+### Step 1: Authenticate with GitHub
+
+This is a private marketplace. Make sure you're authenticated:
 
 ```bash
-/plugin marketplace add owner/claude-helpers
+gh auth login
+gh auth status  # Verify authentication
 ```
 
-Then install individual plugins:
+### Step 2: Add the Marketplace
 
 ```bash
-/plugin install code-review@claude-helpers
-/plugin install pr-toolkit@claude-helpers
-/plugin install feature-dev@claude-helpers
-/plugin install issue-finder@claude-helpers
-/plugin install plugin-dev@claude-helpers
+/plugin marketplace add higoralves/novac-stack
+```
+
+### Step 3: Install Plugins
+
+Install the plugins you need:
+
+```bash
+/plugin install code-review@novac-stack
+/plugin install pr-toolkit@novac-stack
+/plugin install feature-dev@novac-stack
+/plugin install issue-finder@novac-stack
+/plugin install plugin-dev@novac-stack
+```
+
+### Enable Auto-Updates (Optional)
+
+For background auto-updates to work with private repos, add to your shell config (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+Create a token at https://github.com/settings/tokens with `repo` scope.
+
+## Updating
+
+### Update All Plugins
+
+Refresh the marketplace to get latest versions:
+
+```bash
+/plugin marketplace update novac-stack
+```
+
+### Check Installed Plugins
+
+```bash
+/plugin list
+```
+
+### Reinstall a Specific Plugin
+
+To get the latest version of a specific plugin:
+
+```bash
+/plugin uninstall code-review@novac-stack
+/plugin install code-review@novac-stack
 ```
 
 ## Available Plugins
@@ -68,7 +114,7 @@ Comprehensive toolkit for developing Claude Code plugins with expert guidance on
 ## Requirements
 
 - Claude Code CLI
-- GitHub CLI (`gh`) for PR and issue tools
+- GitHub CLI (`gh`) authenticated with repo access
 - Git repository with remote configured
 
 ## Contributing
