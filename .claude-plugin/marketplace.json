@@ -1,0 +1,52 @@
+{
+  "name": "novac-stack",
+  "owner": {
+    "name": "Higor Alves"
+  },
+  "metadata": {
+    "description": "A collection of productivity plugins for Claude Code - code review, PR management, feature development, and plugin creation tools",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "code-review",
+      "source": "./code-review",
+      "description": "Automated code review for pull requests using multiple specialized agents with confidence-based scoring",
+      "version": "1.0.0",
+      "category": "code-quality",
+      "tags": ["review", "code-review", "pull-request", "quality"]
+    },
+    {
+      "name": "pr-toolkit",
+      "source": "./pr-toolkit",
+      "description": "Comprehensive PR review agents specializing in comments, tests, error handling, type design, code quality, and code simplification",
+      "version": "1.0.0",
+      "category": "code-quality",
+      "tags": ["pr", "pull-request", "review", "tests", "types"]
+    },
+    {
+      "name": "feature-dev",
+      "source": "./feature-dev",
+      "description": "Comprehensive feature development workflow with specialized agents for codebase exploration, architecture design, and quality review",
+      "version": "1.0.0",
+      "category": "development",
+      "tags": ["feature", "development", "workflow", "architecture"]
+    },
+    {
+      "name": "issue-finder",
+      "source": "./issue-finder",
+      "description": "Analyze codebases to discover bugs, security vulnerabilities, architectural problems, and improvements, then create GitHub issues",
+      "version": "1.0.0",
+      "category": "code-quality",
+      "tags": ["issues", "bugs", "security", "audit", "github"]
+    },
+    {
+      "name": "plugin-dev",
+      "source": "./plugin-dev",
+      "description": "Comprehensive toolkit for developing Claude Code plugins with expert guidance on hooks, MCP, agents, commands, and skills",
+      "version": "1.0.0",
+      "category": "development",
+      "tags": ["plugin", "development", "hooks", "mcp", "agents"]
+    }
+  ]
+}
