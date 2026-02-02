@@ -1,12 +1,30 @@
 # Issue Finder Plugin
 
-A Claude plugin that analyzes codebases to discover bugs, security vulnerabilities, architectural problems, and improvement opportunities, then creates GitHub issues directly.
+A Claude plugin that analyzes codebases to discover bugs, security vulnerabilities, architectural problems, and improvement opportunities, then creates GitHub issues directly. It can also automate the full fix cycle from issue selection to PR creation.
 
 ## Installation
 
 Add this plugin to your Claude configuration or symlink it to your plugins directory.
 
+## Commands
+
+### `/audit-codebase` - Find and Report Issues
+
+```bash
+/audit-codebase [scope] [--labels label1,label2]
+```
+
+### `/fix-issue` - End-to-End Issue Resolution
+
+```bash
+/fix-issue [issue-number] [--labels label1,label2]
+```
+
+Automates the complete workflow: select issue → assign → plan → implement → PR.
+
 ## Usage
+
+### Audit Codebase
 
 ```bash
 /audit-codebase [scope] [--labels label1,label2]
@@ -32,6 +50,31 @@ Add this plugin to your Claude configuration or symlink it to your plugins direc
 # Audit specific path with labels
 /audit-codebase src/api --labels backend,security-review
 ```
+
+### Fix Issue
+
+```bash
+# Fix a specific issue
+/fix-issue 42
+
+# List open issues and select one interactively
+/fix-issue
+
+# Filter issues by labels when listing
+/fix-issue --labels bug,high-priority
+```
+
+The `/fix-issue` command orchestrates:
+
+1. **Issue Selection**: Pick from open issues or specify by number
+2. **Self-Assignment**: Automatically assigns you to the issue
+3. **Branch Creation**: Creates `fix/issue-N-slug` branch
+4. **Planning (Opus)**: Deep analysis and implementation planning
+5. **User Confirmation**: Review and approve the plan
+6. **Implementation (Sonnet)**: Efficient code changes following the plan
+7. **Quality Check**: Runs tests and reports failures
+8. **Commit & Push**: Commits with `Fixes #N` and pushes
+9. **PR Creation**: Creates a pull request linked to the issue
 
 ## What It Finds
 
@@ -119,11 +162,21 @@ Created issues follow this format:
 | docs | documentation |
 | chore | maintenance |
 
+## Model Strategy
+
+The `/fix-issue` command uses different models for different phases:
+
+| Phase | Model | Rationale |
+|-------|-------|-----------|
+| Planning | Opus | Deep understanding, architectural decisions, root cause analysis |
+| Implementation | Sonnet | Efficient execution, cost-effective for straightforward coding |
+| Orchestration | (inherited) | Simple coordination between phases |
+
 ## Requirements
 
 - GitHub CLI (`gh`) installed and authenticated
 - Git repository with remote configured
-- Write access to create issues
+- Write access to create issues and PRs
 
 ## Privacy
 
