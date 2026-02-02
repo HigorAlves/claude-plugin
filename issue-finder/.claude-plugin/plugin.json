@@ -1,6 +1,6 @@
 {
   "name": "issue-finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Analyze codebases to discover issues and create GitHub issues",
   "author": {
     "name": "Claude Helpers"
