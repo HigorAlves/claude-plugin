@@ -1,5 +1,5 @@
 ---
-description: "Comprehensive PR review using specialized agents"
+description: "Local code analysis before creating a PR (does NOT post comments to GitHub)"
 argument-hint: "[review-aspects]"
 allowed-tools: ["Bash(gh pr view:*)", "Bash(gh api:*)", "Bash(git *)", "Glob", "Grep", "Read", "Task"]
 ---

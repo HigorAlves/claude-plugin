@@ -1,0 +1,8 @@
+{
+  "name": "compozy",
+  "version": "1.0.0",
+  "description": "Spec-driven development orchestration: PRD to PR with parallel task execution and quality gates",
+  "author": {
+    "name": "Claude Helpers"
+  }
+}
