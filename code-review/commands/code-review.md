@@ -1,6 +1,6 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), mcp__github_inline_comment__create_inline_comment
-description: Review a GitHub PR and post inline comments (posts to GitHub)
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), mcp__plugin_github_github__pull_request_review_write, mcp__plugin_github_github__add_comment_to_pending_review
+description: Review a GitHub PR and submit a review with REQUEST_CHANGES (posts to GitHub)
 ---
 
 Provide a code review for the given pull request.
@@ -69,14 +69,21 @@ Note: Still review Claude generated PR's.
 
 6. Filter out any issues that were not validated in step 5. This step will give us our list of high signal issues for our review.
 
-7. If issues were found, skip to step 8 to post inline comments directly.
+7. If NO issues were found, submit an approval review using `mcp__plugin_github_github__pull_request_review_write` with method `create`, event `APPROVE`, and body "LGTM". Then stop.
 
-   If NO issues were found, post a summary comment using `gh pr comment` (if `--comment` argument is provided):
-   "LGTM"
+   If issues were found, continue to step 8.
 
 8. Create a list of all comments that you plan on leaving. This is only for you to make sure you are comfortable with the comments. Do not post this list anywhere.
 
-9. Post inline comments for each issue using `mcp__github_inline_comment__create_inline_comment`. For each comment:
+9. Submit a review with REQUEST_CHANGES using the GitHub pending review workflow:
+
+   **Step 9a**: Create a pending review using `mcp__plugin_github_github__pull_request_review_write` with method `create` (do NOT provide an `event` parameter — this creates a pending review).
+
+   **Step 9b**: For each issue, add a review comment to the pending review using `mcp__plugin_github_github__add_comment_to_pending_review`. Set `subjectType` to `LINE`, provide the `path`, `line` (end line of the range), `side` as `RIGHT`, and for multi-line comments set `startLine` and `startSide` as well.
+
+   **Step 9c**: Once all comments are added, submit the pending review using `mcp__plugin_github_github__pull_request_review_write` with method `submit_pending` and event `REQUEST_CHANGES`. Include a brief summary body listing the number of issues found.
+
+   For each comment:
 
    **Comment Format**: `[type]: [Natural, conversational description]`
 
