@@ -47,6 +47,14 @@
       "version": "1.0.0",
       "category": "development",
       "tags": ["plugin", "development", "hooks", "mcp", "agents"]
+    },
+    {
+      "name": "compozy",
+      "source": "./compozy",
+      "description": "Spec-driven development orchestration: PRD to PR with parallel task execution and quality gates",
+      "version": "1.0.1",
+      "category": "development",
+      "tags": ["orchestration", "spec", "prd", "workflow", "tasks"]
     }
   ]
 }
