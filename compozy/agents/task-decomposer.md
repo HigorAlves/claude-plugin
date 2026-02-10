@@ -72,7 +72,7 @@ Each task gets 2-5 acceptance criteria pulled from the spec's AC list. Every spe
 
 ## Output Format
 
-Return a complete task manifest following the format defined in the task manifest format reference. The manifest should be ready to save as `.compozy/task-manifest.md`.
+Return a complete task manifest following the format defined in the task manifest format reference. The manifest should be ready to save to the orchestration's working directory (the caller will provide the exact path, e.g., `compozy/<branch-name>/files/task-manifest.md`).
 
 Additionally, return a summary table:
 

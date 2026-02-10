@@ -21,6 +21,7 @@ allowed-tools:
   - Glob
   - Grep
   - Task
+  - AskUserQuestion
   - "mcp__plugin_github_github__*"
 ---
 
@@ -36,6 +37,19 @@ You are running the Compozy pipeline — a structured workflow that transforms p
 - **File exclusivity** — During parallel execution, each file is owned by exactly one task agent
 - **Quality gates** — The user approves at key checkpoints before proceeding
 - **Checkpoint everything** — Save state after each phase for recovery via `/compozy:resume`
+- **Always use interactive UI** — Every user interaction MUST use the `AskUserQuestion` tool with clear menu options. Never ask questions via plain text output — always present structured choices with `AskUserQuestion` so the user can click to respond. The user can always select "Other" for free-text input when none of the options fit
+
+---
+
+## Working Directory
+
+All pipeline artifacts are stored in `compozy/<branch-name>/files/` where `<branch-name>` is the sanitized branch name determined in Phase 0. The branch name is derived from the input:
+- **GitHub issue**: `feat/<issue-number>-<short-slug>` or `fix/<issue-number>-<short-slug>`
+- **Inline text or file**: `feat/<short-slug>` or `fix/<short-slug>`
+
+The branch name is sanitized for directory use: slashes are replaced with dashes. For example, branch `feat/142-notification-prefs` creates directory `compozy/feat-142-notification-prefs/files/`.
+
+Throughout this document, **`$COMPOZY_DIR`** refers to this resolved directory path (e.g., `compozy/feat-142-notification-prefs/files/`). The actual git branch name (with slashes) is stored in the checkpoint as `$BRANCH_NAME`.
 
 ---
 
@@ -47,7 +61,7 @@ Parse the user's input from `$ARGUMENTS`:
 - **GitHub issue URL or number** (e.g., `#42`, `42`, `https://github.com/org/repo/issues/42`) → fetch with `gh issue view`
 - **File path** (e.g., `./prd.md`, `docs/requirements.txt`) → read with Read tool
 - **Inline text** (anything else) → use directly as the PRD
-- **Empty** → ask user to describe what they want to build
+- **Empty** → use `AskUserQuestion` to ask user to describe what they want to build (they'll provide via "Other" free-text)
 
 **Flags**:
 - `--auto` → Reduce gates to only: spec approval (Phase 3) + final review (Phase 6). All other gates are skipped with best-guess defaults.
@@ -56,25 +70,32 @@ Parse the user's input from `$ARGUMENTS`:
 
 ## Phase 0: Setup
 
-**Goal**: Initialize the orchestration environment
+**Goal**: Initialize the orchestration environment and determine the working directory
 
 **Actions**:
-1. Create `.compozy/` directory if it doesn't exist
-2. Create todo list tracking all 7 phases
-3. Detect the input source type and load the PRD content
-4. Check for `--auto` flag in arguments
-5. Save initial checkpoint:
+1. Detect the input source type and load the PRD content
+2. Check for `--auto` flag in arguments
+3. **Generate the branch name** from the input:
+   - GitHub issue: `feat/<issue-number>-<slug>` (or `fix/` for bug labels) — derive slug from issue title
+   - Inline text or file: `feat/<slug>` — derive slug from the first few meaningful words
+   - Rules: lowercase, hyphens for spaces, max 50 characters, no special characters
+4. **Sanitize for directory use**: replace `/` with `-` to get the directory name
+5. Create `compozy/<sanitized-branch-name>/files/` directory (the `$COMPOZY_DIR`)
+6. Create todo list tracking all 7 phases
+7. Save initial checkpoint:
 
 ```markdown
 # Checkpoint
 **Phase**: 0 — Setup
 **Status**: complete
 **Input source**: [type and reference]
+**Branch name**: [branch-name with slashes, e.g., feat/142-notification-prefs]
+**Compozy dir**: [resolved $COMPOZY_DIR path, e.g., compozy/feat-142-notification-prefs/files]
 **Auto mode**: [yes/no]
 **Started**: [timestamp]
 ```
 
-Write to `.compozy/checkpoint.md`.
+Write to `$COMPOZY_DIR/checkpoint.md`.
 
 ---
 
@@ -96,9 +117,20 @@ Write to `.compozy/checkpoint.md`.
    - Clarifying questions (blocking and non-blocking)
 
 3. **Gate** (skip if `--auto`):
-   - Present blocking questions and wait for answers
-   - Ask: "Does this analysis capture your intent? (yes / revise: [feedback])"
-   - If "revise": re-run analyzer with feedback
+   - If there are blocking questions, present each using `AskUserQuestion` with relevant answer options
+   - Then use `AskUserQuestion` for the approval gate:
+     ```
+     AskUserQuestion:
+       question: "Does this PRD analysis capture your intent?"
+       header: "PRD Review"
+       options:
+         - label: "Approved"
+           description: "Analysis looks correct, proceed to codebase discovery"
+         - label: "Revise"
+           description: "Re-run the analysis with your feedback (provide via Other)"
+       multiSelect: false
+     ```
+   - If "Revise" or "Other" with feedback: re-run analyzer with feedback
    - If `--auto`: proceed with recommended defaults for all questions
 
 4. Save analyzed requirements for Phase 3
@@ -128,7 +160,7 @@ Write to `.compozy/checkpoint.md`.
 
 3. Read all key files identified by the explore agents
 
-4. Compile findings into `.compozy/codebase-context.md`:
+4. Compile findings into `$COMPOZY_DIR/codebase-context.md`:
    ```markdown
    # Codebase Context
 
@@ -174,7 +206,7 @@ Write to `.compozy/checkpoint.md`.
    - The spec template from the spec-authoring skill
    - Instruction to fill in all 12 sections
 
-2. Write the generated spec to `.compozy/tech-spec.md`
+2. Write the generated spec to `$COMPOZY_DIR/tech-spec.md`
 
 3. Present a summary to the user:
    ```
@@ -196,13 +228,22 @@ Write to `.compozy/checkpoint.md`.
    ...
    ```
 
-4. **Gate** (always, even with `--auto`):
-   - Ask: "Review the spec at `.compozy/tech-spec.md`. Options:"
-     - **"approved"** — proceed to task decomposition
-     - **"revise: [feedback]"** — regenerate spec with your feedback
-     - **"edit"** — make manual edits, then say "approved" when done
-   - If "revise": re-run spec-generator with feedback, present again
-   - If "edit": wait for user to finish editing and confirm
+4. **Gate** (always, even with `--auto`) — use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "Review the spec at $COMPOZY_DIR/tech-spec.md. How would you like to proceed?"
+     header: "Spec Review"
+     options:
+       - label: "Approved"
+         description: "Spec looks good, proceed to task decomposition"
+       - label: "Revise"
+         description: "Regenerate spec with your feedback (provide via Other)"
+       - label: "Edit manually"
+         description: "You'll edit the spec file directly, then confirm when done"
+     multiSelect: false
+   ```
+   - If "Revise" or "Other" with feedback: re-run spec-generator with feedback, present again
+   - If "Edit manually": wait for user to finish editing, then re-present for approval
 
 5. Update checkpoint:
 ```markdown
@@ -227,7 +268,7 @@ Write to `.compozy/checkpoint.md`.
    - The task manifest format reference
    - Codebase conventions from Phase 2
 
-2. Write the manifest to `.compozy/task-manifest.md`
+2. Write the manifest to `$COMPOZY_DIR/task-manifest.md`
 
 3. Present the wave/task summary table:
    ```
@@ -242,9 +283,19 @@ Write to `.compozy/checkpoint.md`.
    Total: 6 tasks, 3 waves, max 3 parallel
    ```
 
-4. **Gate** (skip if `--auto`):
-   - Ask: "Does this task breakdown look right? (proceed / adjust: [feedback])"
-   - If "adjust": re-run decomposer with feedback
+4. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "Does this task breakdown look right?"
+     header: "Task Plan"
+     options:
+       - label: "Proceed"
+         description: "Start executing tasks wave by wave"
+       - label: "Adjust"
+         description: "Re-run decomposition with your feedback (provide via Other)"
+     multiSelect: false
+   ```
+   - If "Adjust" or "Other" with feedback: re-run decomposer with feedback
    - If `--auto`: proceed without confirmation
 
 5. Update checkpoint:
@@ -263,13 +314,13 @@ Write to `.compozy/checkpoint.md`.
 **Goal**: Implement all tasks, wave by wave
 
 **Actions**:
-1. Initialize progress file `.compozy/progress.md`:
+1. Initialize progress file `$COMPOZY_DIR/progress.md`:
    ```markdown
    # Execution Progress
 
    **Started**: [timestamp]
-   **Spec**: .compozy/tech-spec.md
-   **Manifest**: .compozy/task-manifest.md
+   **Spec**: $COMPOZY_DIR/tech-spec.md
+   **Manifest**: $COMPOZY_DIR/task-manifest.md
    ```
 
 2. For each wave (sequential):
@@ -285,7 +336,7 @@ Write to `.compozy/checkpoint.md`.
 
    b. **Collect results** from all task agents
 
-   c. **Update progress** in `.compozy/progress.md`:
+   c. **Update progress** in `$COMPOZY_DIR/progress.md`:
       ```markdown
       ## Wave [N]: [Purpose]
       **Status**: complete
@@ -351,16 +402,24 @@ Write to `.compozy/checkpoint.md`.
    - [Any cross-component problems]
    ```
 
-4. **Gate** (always):
-   - Present consolidated review
-   - Ask: "How would you like to proceed?"
-     - **"fix all"** — fix all critical + moderate issues
-     - **"fix critical"** — fix only critical issues
-     - **"proceed"** — create PR as-is
-     - **"abort"** — stop the pipeline
-
+4. **Gate** (always) — present consolidated review, then use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "How would you like to proceed with the review findings?"
+     header: "Review"
+     options:
+       - label: "Fix all"
+         description: "Fix all critical and moderate issues before PR"
+       - label: "Fix critical only"
+         description: "Fix only critical issues, skip moderate ones"
+       - label: "Proceed as-is"
+         description: "Create PR without fixing any issues"
+       - label: "Abort"
+         description: "Stop the pipeline entirely"
+     multiSelect: false
+   ```
    - If fixing: launch `task-implementer` agents for fixes, then re-run validation on changed files
-   - If "abort": clean up and exit
+   - If "Abort": clean up and exit
 
 5. Update checkpoint:
 ```markdown
@@ -381,19 +440,41 @@ Write to `.compozy/checkpoint.md`.
 1. **Run tests** (if detected):
    - Look for test runners: `package.json` scripts, `pytest`, `go test`, `cargo test`, `Makefile` test target
    - Run the appropriate test command
-   - If tests fail: report failures and ask user whether to proceed or fix
+   - If tests fail, use `AskUserQuestion`:
+     ```
+     AskUserQuestion:
+       question: "Tests failed. How would you like to proceed?"
+       header: "Tests"
+       options:
+         - label: "Fix"
+           description: "Attempt to fix the failing tests"
+         - label: "Proceed anyway"
+           description: "Create PR with test failures noted in description"
+         - label: "Abort"
+           description: "Stop the pipeline"
+       multiSelect: false
+     ```
 
-2. **Ask about artifacts**:
-   - Ask: "Include `.compozy/` spec artifacts in the commit? (yes/no)"
-   - This lets the user choose traceability vs. clean repos
+2. **Ask about artifacts** — use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "Include compozy/ spec artifacts in the commit?"
+     header: "Artifacts"
+     options:
+       - label: "Yes"
+         description: "Include spec and manifest for traceability"
+       - label: "No"
+         description: "Keep the commit clean, artifacts stay local only"
+     multiSelect: false
+   ```
 
 3. **Launch `pr-assembler` agent** (sonnet):
    - `subagent_type`: `compozy:pr-assembler`
    - `model`: `sonnet`
-   - Provide: tech spec, task manifest, review results, file list, artifact preference
+   - Provide: tech spec, task manifest, review results, file list, artifact preference, **and the pre-determined `$BRANCH_NAME` from the checkpoint**
 
 4. The pr-assembler will:
-   - Create a feature branch
+   - Create a feature branch using `$BRANCH_NAME` (the branch name determined in Phase 0)
    - Stage and commit files
    - Push to remote
    - Create the PR
@@ -415,7 +496,7 @@ Write to `.compozy/checkpoint.md`.
    - Tests: [passing/failing/skipped]
 
    ### Spec Reference
-   [Path to tech spec if included in commit, or note that it's in .compozy/]
+   [Path to tech spec if included in commit, or note that it's in $COMPOZY_DIR/]
    ```
 
 6. Update checkpoint:
@@ -433,12 +514,12 @@ Write to `.compozy/checkpoint.md`.
 
 ### Context Limit Approaching
 If the conversation is getting long:
-1. Save a detailed checkpoint to `.compozy/checkpoint.md`
+1. Save a detailed checkpoint to `$COMPOZY_DIR/checkpoint.md`
 2. Tell the user: "Context is getting long. Run `/compozy:resume` to continue from Phase [N]."
 
 ### Task Agent Failure
 If a task-implementer agent fails or returns an error:
-1. Log the failure in `.compozy/progress.md`
+1. Log the failure in `$COMPOZY_DIR/progress.md`
 2. Mark the task as "failed" in the manifest
 3. Mark dependent tasks as "skipped"
 4. Continue with independent tasks
@@ -447,13 +528,13 @@ If a task-implementer agent fails or returns an error:
 ### Build/Test Failure
 If build or tests fail in Phase 7:
 1. Present the failure output
-2. Ask: "Tests failed. Options: fix / proceed anyway / abort"
-3. If "fix": launch task-implementer to fix, re-run tests
-4. If "proceed": create PR with test failure noted in description
-5. If "abort": clean up
+2. Use `AskUserQuestion` with options: "Fix" / "Proceed anyway" / "Abort"
+3. If "Fix": launch task-implementer to fix, re-run tests
+4. If "Proceed anyway": create PR with test failure noted in description
+5. If "Abort": clean up
 
 ### Interrupted Pipeline
 If the user stops mid-pipeline:
 - The checkpoint file always reflects the last completed phase
-- All artifacts in `.compozy/` are preserved
+- All artifacts in `$COMPOZY_DIR/` are preserved
 - `/compozy:resume` can pick up from any phase

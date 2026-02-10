@@ -21,6 +21,7 @@ allowed-tools:
   - Glob
   - Grep
   - Task
+  - AskUserQuestion
   - "mcp__plugin_github_github__*"
 ---
 
@@ -32,7 +33,12 @@ Resume an interrupted Compozy pipeline from the last checkpoint or a specified p
 
 - **Never add AI attribution** — Do not include "Generated with Claude", "AI-generated", or similar references
 - **Never mention "CLAUDE.md"** — Refer to "project guidelines" or "our guidelines" instead
-- **Restore full context** before resuming — read all `.compozy/` artifacts to rebuild understanding
+- **Restore full context** before resuming — read all `$COMPOZY_DIR/` artifacts to rebuild understanding
+- **Always use interactive UI** — Every user interaction MUST use the `AskUserQuestion` tool with clear menu options. Never ask questions via plain text output — always present structured choices so the user can click to respond
+
+## Working Directory
+
+Pipeline artifacts are stored in `compozy/<branch-name>/files/` — see the orchestrate command for details on this convention. Throughout this document, **`$COMPOZY_DIR`** refers to the resolved directory path for the orchestration being resumed.
 
 ---
 
@@ -44,15 +50,20 @@ Resume an interrupted Compozy pipeline from the last checkpoint or a specified p
 
 ## Step 1: Verify State
 
-1. Check that `.compozy/` directory exists
+1. Check that `compozy/` directory exists at the project root
    - If not: "No Compozy state found. Run `/compozy:orchestrate` to start a new pipeline."
 
-2. Read `.compozy/checkpoint.md`
-   - If not found: "No checkpoint found. Run `/compozy:orchestrate` to start a new pipeline."
+2. **Discover the orchestration directory**:
+   - List subdirectories under `compozy/` (these are sanitized branch names)
+   - For each, check if `<subdir>/files/checkpoint.md` exists
+   - If **one** orchestration found: use it as `$COMPOZY_DIR`
+   - If **multiple** found: use `AskUserQuestion` to ask which to resume (list branch names as options)
+   - If **none** have a checkpoint: "No checkpoint found. Run `/compozy:orchestrate` to start a new pipeline."
 
-3. Parse the checkpoint:
+3. Read `$COMPOZY_DIR/checkpoint.md` and parse:
    - Last completed phase number
    - Status of that phase
+   - Branch name (`$BRANCH_NAME`)
    - Any notes or context
 
 4. Determine resume point:
@@ -61,16 +72,16 @@ Resume an interrupted Compozy pipeline from the last checkpoint or a specified p
 
 ## Step 2: Restore Context
 
-Read all available `.compozy/` artifacts to rebuild context:
+Read all available `$COMPOZY_DIR/` artifacts to rebuild context:
 
 1. **Always read** (if they exist):
-   - `.compozy/checkpoint.md` — current state
-   - `.compozy/tech-spec.md` — the approved spec
+   - `$COMPOZY_DIR/checkpoint.md` — current state
+   - `$COMPOZY_DIR/tech-spec.md` — the approved spec
 
 2. **Read based on resume phase**:
-   - Resuming Phase 2+: read `.compozy/codebase-context.md`
-   - Resuming Phase 4+: read `.compozy/task-manifest.md`
-   - Resuming Phase 5+: read `.compozy/progress.md`
+   - Resuming Phase 2+: read `$COMPOZY_DIR/codebase-context.md`
+   - Resuming Phase 4+: read `$COMPOZY_DIR/task-manifest.md`
+   - Resuming Phase 5+: read `$COMPOZY_DIR/progress.md`
 
 3. Summarize restored context:
    ```
@@ -78,6 +89,8 @@ Read all available `.compozy/` artifacts to rebuild context:
 
    **Last checkpoint**: Phase [N] — [Phase Name]
    **Resuming from**: Phase [N+1] — [Phase Name]
+   **Branch**: [branch name from checkpoint]
+   **Working dir**: [resolved $COMPOZY_DIR path]
    **Spec**: [title from tech-spec.md]
    **Tasks**: [count] tasks across [count] waves
    **Progress**: [X]/[Y] tasks completed
@@ -96,11 +109,33 @@ Continue the orchestration pipeline from the determined phase. Follow the exact 
 - Re-run codebase discovery (it's fast and context may have changed)
 
 ### Resuming Phase 3 (Tech Spec)
-- If spec exists: ask user if they want to regenerate or use existing
+- If spec exists, use `AskUserQuestion`:
+  ```
+  AskUserQuestion:
+    question: "An existing tech spec was found. What would you like to do?"
+    header: "Spec"
+    options:
+      - label: "Use existing"
+        description: "Continue with the current spec as-is"
+      - label: "Regenerate"
+        description: "Generate a new spec from scratch"
+    multiSelect: false
+  ```
 - If no spec: generate from scratch using available requirements
 
 ### Resuming Phase 4 (Task Decomposition)
-- If manifest exists: ask user if they want to redecompose or use existing
+- If manifest exists, use `AskUserQuestion`:
+  ```
+  AskUserQuestion:
+    question: "An existing task manifest was found. What would you like to do?"
+    header: "Tasks"
+    options:
+      - label: "Use existing"
+        description: "Continue with the current task breakdown"
+      - label: "Redecompose"
+        description: "Generate a new task breakdown from the spec"
+    multiSelect: false
+  ```
 - If no manifest: decompose from the approved spec
 
 ### Resuming Phase 5 (Task Execution)
@@ -115,25 +150,48 @@ Continue the orchestration pipeline from the determined phase. Follow the exact 
 ### Resuming Phase 7 (PR Generation)
 - Check if branch already exists
 - Check if PR already exists
-- If PR exists: ask user if they want to update it or create a new one
+- If PR exists, use `AskUserQuestion`:
+  ```
+  AskUserQuestion:
+    question: "A PR already exists for this branch. What would you like to do?"
+    header: "PR"
+    options:
+      - label: "Update existing"
+        description: "Push changes and update the existing PR"
+      - label: "Create new"
+        description: "Create a fresh PR from current state"
+    multiSelect: false
+  ```
 
 ## Error Handling
 
 ### Missing Artifacts
-If a required artifact for the resume phase is missing:
-- Report what's missing
-- Suggest running from an earlier phase: "The tech spec is missing. Resume from Phase 3 instead? (yes/no)"
+If a required artifact for the resume phase is missing, use `AskUserQuestion`:
+```
+AskUserQuestion:
+  question: "The [artifact] is missing. How would you like to proceed?"
+  header: "Missing"
+  options:
+    - label: "Run from Phase [N]"
+      description: "Resume from the phase that generates this artifact"
+    - label: "Abort"
+      description: "Stop and start fresh with /compozy:orchestrate"
+  multiSelect: false
+```
 
 ### Stale Checkpoint
-If the checkpoint references files that no longer exist or have changed:
-- Warn the user
-- Suggest re-running from the affected phase
+If the checkpoint references files that no longer exist or have changed, use `AskUserQuestion` to ask whether to re-run from the affected phase or abort.
 
 ### Phase Jump Warning
-If the user requests jumping to a phase that skips prerequisite work:
+If the user requests jumping to a phase that skips prerequisite work, use `AskUserQuestion`:
 ```
-Warning: Jumping to Phase 5 (Execution) but Phase 4 (Decomposition) has no manifest.
-Options:
-- Run Phase 4 first, then continue to Phase 5
-- Abort and run /compozy:orchestrate from the beginning
+AskUserQuestion:
+  question: "Phase [N] requires artifacts from Phase [M] which don't exist. What would you like to do?"
+  header: "Skip"
+  options:
+    - label: "Run Phase [M] first"
+      description: "Execute the prerequisite phase, then continue"
+    - label: "Abort"
+      description: "Stop and run /compozy:orchestrate from the beginning"
+  multiSelect: false
 ```

@@ -79,7 +79,7 @@ Before returning the spec, verify:
 
 ## Output Format
 
-Return the complete spec following the template structure (all 12 sections). The spec should be written in markdown and ready to save as `.compozy/tech-spec.md`.
+Return the complete spec following the template structure (all 12 sections). The spec should be written in markdown and ready to save to the orchestration's working directory (the caller will provide the exact path, e.g., `compozy/<branch-name>/files/tech-spec.md`).
 
 ## Guidelines
 

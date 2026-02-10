@@ -27,11 +27,14 @@ You will receive:
 - Integration validation results
 - Quality review results and fixes applied
 - List of all created/modified files
-- Whether to include `.compozy/` artifacts in the commit
+- Whether to include `compozy/` artifacts in the commit
+- **The pre-determined branch name** (`$BRANCH_NAME`) from Phase 0 — use this instead of generating a new one
 
 ## Process
 
-### 1. Generate Branch Name
+### 1. Use Pre-Determined Branch Name
+
+Use the `$BRANCH_NAME` provided by the orchestration pipeline (determined in Phase 0). If no branch name is provided, generate one:
 
 Format: `feat/[short-description]` or `fix/[short-description]`
 
@@ -103,7 +106,7 @@ All acceptance criteria from the tech spec have been met:
 
 1. Create and checkout the branch
 2. Stage all implementation files
-3. Optionally stage `.compozy/` directory (based on user preference)
+3. Optionally stage `compozy/` directory (based on user preference)
 4. Create the commit
 5. Push to remote
 6. Create the PR via `gh pr create`
@@ -125,7 +128,7 @@ All acceptance criteria from the tech spec have been met:
 ### Files Included
 - [N] new files
 - [N] modified files
-- [Included/Excluded] .compozy/ artifacts
+- [Included/Excluded] compozy/ artifacts
 
 ### Summary
 [1-2 sentences about what was delivered]

@@ -9,6 +9,7 @@ allowed-tools:
   - Glob
   - Grep
   - Task
+  - AskUserQuestion
 ---
 
 # Compozy: Spec Management
@@ -19,6 +20,11 @@ Standalone command for generating, viewing, and editing technical specifications
 
 - **Never add AI attribution** — Do not include "Generated with Claude", "AI-generated", or similar references
 - **Never mention "CLAUDE.md"** — Refer to "project guidelines" or "our guidelines" instead
+- **Always use interactive UI** — Every user interaction MUST use the `AskUserQuestion` tool with clear menu options. Never ask questions via plain text output — always present structured choices so the user can click to respond
+
+## Working Directory
+
+All artifacts are stored in `compozy/<branch-name>/files/`. When generating a new spec, the branch name is derived from the input (same rules as the orchestrate command). When viewing or editing, the existing `compozy/` directory is scanned to find the spec. Throughout this document, **`$COMPOZY_DIR`** refers to the resolved directory path.
 
 ---
 
@@ -43,33 +49,49 @@ Parse `$ARGUMENTS` for a subcommand:
    - GitHub issue URL/number → fetch with `gh issue view`
    - File path → read with Read tool
    - Inline text → use directly
-   - Empty → ask user to describe what they want to build
+   - Empty → use `AskUserQuestion` to ask user to describe what they want to build (they'll provide via "Other" free-text)
 
-2. **PRD Analysis**: Launch `prd-analyzer` agent (opus):
+2. **Generate branch name and create working directory**:
+   - Derive branch name from input (same rules as orchestrate Phase 0)
+   - Sanitize for directory use (replace `/` with `-`)
+   - Create `compozy/<sanitized-branch-name>/files/` (`$COMPOZY_DIR`)
+
+3. **PRD Analysis**: Launch `prd-analyzer` agent (opus):
    - `subagent_type`: `compozy:prd-analyzer`
    - `model`: `opus`
-   - Present analysis and ask clarifying questions
-   - Wait for user answers
+   - Present analysis and use `AskUserQuestion` for each clarifying question with relevant answer options
+   - Collect user answers
 
-3. **Codebase Discovery**: Launch 2 Explore agents in parallel:
+4. **Codebase Discovery**: Launch 2 Explore agents in parallel:
    - `subagent_type`: `Explore`
    - Map architecture and find similar features
-   - Save to `.compozy/codebase-context.md`
+   - Save to `$COMPOZY_DIR/codebase-context.md`
 
-4. **Spec Generation**: Launch `spec-generator` agent (opus):
+5. **Spec Generation**: Launch `spec-generator` agent (opus):
    - `subagent_type`: `compozy:spec-generator`
    - `model`: `opus`
    - Provide requirements + codebase context + spec template
-   - Write to `.compozy/tech-spec.md`
+   - Write to `$COMPOZY_DIR/tech-spec.md`
 
-5. **Present and approve**:
-   - Show spec summary (title, components, files, key decisions)
-   - Ask: "approved / revise: [feedback] / edit"
+6. **Present and approve** — show spec summary, then use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "Review the spec at $COMPOZY_DIR/tech-spec.md. How would you like to proceed?"
+     header: "Spec Review"
+     options:
+       - label: "Approved"
+         description: "Spec looks good"
+       - label: "Revise"
+         description: "Regenerate spec with your feedback (provide via Other)"
+       - label: "Edit manually"
+         description: "You'll edit the spec file directly, then confirm when done"
+     multiSelect: false
+   ```
    - Iterate until approved
 
-6. Report:
+7. Report:
    ```
-   Spec saved to .compozy/tech-spec.md
+   Spec saved to $COMPOZY_DIR/tech-spec.md
 
    To run the full pipeline with this spec: /compozy:orchestrate
    To decompose into tasks: /compozy:orchestrate (it will detect the existing spec)
@@ -83,10 +105,13 @@ Parse `$ARGUMENTS` for a subcommand:
 
 ### Process
 
-1. Check for `.compozy/tech-spec.md`
-   - If not found: "No spec found. Run `/compozy:spec generate [PRD]` to create one."
+1. **Discover the working directory**:
+   - Scan `compozy/` for subdirectories containing `files/tech-spec.md`
+   - If one found: use it as `$COMPOZY_DIR`
+   - If multiple found: use `AskUserQuestion` to ask which one to view (list branch names as options)
+   - If none found: "No spec found. Run `/compozy:spec generate [PRD]` to create one."
 
-2. Read the spec file
+2. Read the spec file at `$COMPOZY_DIR/tech-spec.md`
 
 3. Present a structured summary:
    ```
@@ -119,7 +144,7 @@ Parse `$ARGUMENTS` for a subcommand:
    - [AC-2]: [Brief]
    ...
 
-   Full spec: .compozy/tech-spec.md
+   Full spec: $COMPOZY_DIR/tech-spec.md
    ```
 
 ---
@@ -130,13 +155,14 @@ Parse `$ARGUMENTS` for a subcommand:
 
 ### Process
 
-1. Check for `.compozy/tech-spec.md`
-   - If not found: "No spec found. Run `/compozy:spec generate [PRD]` to create one."
+1. **Discover the working directory** (same as view):
+   - Scan `compozy/` for subdirectories containing `files/tech-spec.md`
+   - If one found: use it. If multiple: use `AskUserQuestion` to ask which one. If none: "No spec found."
 
 2. Parse the section argument:
    - Number (1-12) → map to section name
    - Section name → match directly
-   - No argument → show section list and ask which to edit
+   - No argument → use `AskUserQuestion` to ask which section to edit (list sections as options, max 4 per question — split across multiple questions if needed)
 
    Section mapping:
    | # | Section |
@@ -156,13 +182,33 @@ Parse `$ARGUMENTS` for a subcommand:
 
 3. Read the current section content
 
-4. Ask the user what changes they want:
-   - "What would you like to change in the [section name] section?"
+4. Use `AskUserQuestion` to ask what changes the user wants:
+   ```
+   AskUserQuestion:
+     question: "What would you like to change in the [section name] section?"
+     header: "Edit"
+     options:
+       - label: "Rewrite"
+         description: "Regenerate this section with new guidance (provide via Other)"
+       - label: "Add content"
+         description: "Add new items to this section (provide via Other)"
+     multiSelect: false
+   ```
 
 5. Apply the edits using the Edit tool
 
-6. Show the updated section and confirm:
-   - "Section updated. Looks good? (yes / more changes)"
+6. Show the updated section, then use `AskUserQuestion`:
+   ```
+   AskUserQuestion:
+     question: "Section updated. How does it look?"
+     header: "Confirm"
+     options:
+       - label: "Looks good"
+         description: "Done editing this section"
+       - label: "More changes"
+         description: "Continue editing (provide feedback via Other)"
+     multiSelect: false
+   ```
 
 ---
 
@@ -177,5 +223,5 @@ If no subcommand is provided, display:
 /compozy:spec view               View current spec summary
 /compozy:spec edit [section]     Edit a section (1-12 or section name)
 
-Current spec: [exists at .compozy/tech-spec.md / not found]
+Current spec: [exists at $COMPOZY_DIR/tech-spec.md / not found]
 ```

@@ -18,7 +18,7 @@ The main pipeline. Takes a product requirement and produces a pull request.
 
 | Phase | Name | Gate | Description |
 |-------|------|------|-------------|
-| 0 | Setup | - | Initialize `.compozy/` directory and parse input |
+| 0 | Setup | - | Generate branch name, create `compozy/<branch>/files/` directory, parse input |
 | 1 | PRD Analysis | Yes* | Extract requirements, identify gaps, ask questions |
 | 2 | Codebase Discovery | No | Explore architecture, patterns, conventions |
 | 3 | Tech Spec | **Always** | Generate implementation-ready spec (user must approve) |
@@ -52,11 +52,25 @@ Standalone spec management without the full pipeline.
 
 ## State Directory
 
-The `.compozy/` directory stores all pipeline artifacts:
+All pipeline artifacts are stored in `compozy/<branch-name>/files/` where `<branch-name>` is a sanitized version of the git branch name (slashes replaced with dashes), determined in Phase 0. This allows multiple orchestrations to coexist:
+
+```
+compozy/
+  feat-142-notification-prefs/
+    files/
+      checkpoint.md
+      codebase-context.md
+      tech-spec.md
+      task-manifest.md
+      progress.md
+  feat-dark-mode/
+    files/
+      ...
+```
 
 | File | Phase | Purpose |
 |------|-------|---------|
-| `checkpoint.md` | All | Resume point with phase and status |
+| `checkpoint.md` | All | Resume point with phase, status, and branch name |
 | `codebase-context.md` | 2 | Architecture and convention analysis |
 | `tech-spec.md` | 3 | The approved technical specification |
 | `task-manifest.md` | 4 | Task breakdown with waves and file ownership |
@@ -91,4 +105,4 @@ At the end of the pipeline, you choose whether to include these artifacts in the
 - **Review the spec carefully** — it's the single most important artifact. Everything flows from it
 - **Use `--auto` for well-defined tasks** — if your requirements are clear and unambiguous, auto mode speeds things up
 - **Use `/compozy:spec generate` first** — if you want to iterate on the spec before committing to the full pipeline
-- **Add `.compozy/` to `.gitignore`** — if you don't want spec artifacts tracked in version control
+- **Add `compozy/` to `.gitignore`** — if you don't want spec artifacts tracked in version control
