@@ -1,6 +1,6 @@
 ---
 description: Systematic debugging — find root cause before fixing, with structured investigation phases
-argument-hint: "[bug description, error message, or test failure] [--team]"
+argument-hint: "[bug description, error message, or test failure] [--auto] [--team] [--worktree] [--repo=name]"
 allowed-tools:
   - Read
   - Write
@@ -41,9 +41,20 @@ If you haven't completed Phase 1, you cannot propose fixes.
 
 ## Flags
 
+- `--auto` → Full autopilot. Skip ALL user interactions — make best-guess decisions at every checkpoint. Auto-approves root cause hypotheses, auto-selects fix approach, auto-runs verification. The debug flow runs end-to-end without stopping.
 - `--team` → Enable team debugging. Dispatches 3 investigation agents in parallel (Data Flow Tracer, Change Analyst, Pattern Scout), then synthesizes findings. See `compozy:team-agents` skill for the full Debugging Team pattern.
+- `--worktree` → Run debugging in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before investigation begins. This allows running multiple Claude instances on different bugs in parallel without file conflicts. The worktree branch is named `fix/<bug-slug>`.
+- `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=Discover` will `cd Discover` first.
 
 ## Process
+
+### Phase 0: Setup (if `--repo` or `--worktree`)
+
+1. **Repository selection** — If `--repo=<name>` is set, `cd` into that directory first. Verify it's a git repository. If not found, report error and stop.
+2. **Worktree creation** — If `--worktree` flag is set:
+   - Derive a branch name from the bug description: `fix/<bug-slug>` (lowercase, hyphens, max 50 chars)
+   - Use the `compozy:worktrees` skill to create an isolated worktree
+   - All subsequent phases run inside the worktree
 
 ### Phase 1: Root Cause Investigation
 
@@ -124,7 +135,7 @@ Synthesize their findings, then present the consolidated root cause hypothesis t
    ```
    Use `console.error()` in tests — logger may be suppressed.
 
-Present findings using `AskUserQuestion`:
+Present findings (skip if `--auto`) using `AskUserQuestion`:
 ```
 AskUserQuestion:
   question: "Root cause investigation complete. Here's what I found: [findings]. How to proceed?"
@@ -138,6 +149,7 @@ AskUserQuestion:
       description: "Let's discuss the findings before proceeding"
   multiSelect: false
 ```
+If `--auto`: proceed to fix immediately.
 
 ### Phase 2: Pattern Analysis
 
@@ -156,7 +168,7 @@ AskUserQuestion:
 
 **If 3+ fixes have failed:** STOP. Question the architecture.
 
-Use `AskUserQuestion`:
+Use `AskUserQuestion` (skip if `--auto`):
 ```
 AskUserQuestion:
   question: "3+ fix attempts have failed. This may be an architectural problem. How to proceed?"
@@ -170,6 +182,7 @@ AskUserQuestion:
       description: "Stop debugging, revisit later"
   multiSelect: false
 ```
+If `--auto`: question architecture automatically, then retry.
 
 ### Phase 4: Implementation
 
@@ -180,7 +193,7 @@ AskUserQuestion:
 5. **Run full test suite** to check for regressions
 6. **Report results** with evidence (test output, not claims)
 
-Present results:
+Present results (skip if `--auto`):
 ```
 AskUserQuestion:
   question: "Bug fixed. [Test output summary]. What's next?"
@@ -194,6 +207,7 @@ AskUserQuestion:
       description: "Create a commit with this fix"
   multiSelect: false
 ```
+If `--auto`: commit the fix automatically.
 
 ## Red Flags — STOP and Return to Phase 1
 

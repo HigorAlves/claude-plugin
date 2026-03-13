@@ -1,6 +1,6 @@
 ---
 description: Brainstorming and design — explore requirements, ask questions, propose approaches, and produce a design spec
-argument-hint: "[topic or feature description]"
+argument-hint: "[topic or feature description] [--auto] [--worktree] [--repo=name]"
 allowed-tools:
   - Read
   - Write
@@ -27,7 +27,21 @@ You are running the Compozy design flow — a structured brainstorming and desig
 
 "This is too simple to need a design" — every project needs one. Simple designs are fast to write.
 
+## Flags
+
+- `--auto` → Full autopilot. Skip ALL user interactions — make best-guess decisions for clarifying questions, approach selection, and section approvals. Produces the design spec end-to-end without stopping.
+- `--worktree` → Run design exploration in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before exploration begins. This allows running multiple Claude instances on different design tasks in parallel without conflicts.
+- `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=Discover` will `cd Discover` first.
+
 ## Process
+
+### Step 0: Setup (if `--repo` or `--worktree`)
+
+1. **Repository selection** — If `--repo=<name>` is set, `cd` into that directory first. Verify it's a git repository. If not found, report error and stop.
+2. **Worktree creation** — If `--worktree` flag is set:
+   - Derive a branch name from the topic: `design/<topic-slug>` (lowercase, hyphens, max 50 chars)
+   - Use the `compozy:worktrees` skill to create an isolated worktree
+   - All subsequent steps run inside the worktree
 
 ### Step 1: Explore Project Context
 

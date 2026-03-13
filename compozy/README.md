@@ -4,7 +4,7 @@ Full-lifecycle development orchestration for Claude Code. Design, plan, implemen
 
 ## Commands
 
-### `/compozy:orchestrate [PRD] [--auto] [--team]`
+### `/compozy:orchestrate [PRD] [--auto] [--team] [--worktree] [--repo=name]`
 
 The main pipeline. Takes a product requirement and produces a pull request.
 
@@ -27,15 +27,16 @@ The main pipeline. Takes a product requirement and produces a pull request.
 | 6 | Integration & Review | **Always** | Two-stage review: spec compliance → code quality |
 | 7 | PR Generation | No | Verify tests, create branch, commit, push, open PR |
 
-*Skipped with `--auto` flag. With `--team`, Phase 5 adds reviewer + architect agents per wave.
+*With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
 
-### `/compozy:design [topic]`
+### `/compozy:design [topic] [--auto] [--worktree] [--repo=name]`
 
 Brainstorming and design — explore requirements, ask questions one at a time, propose 2-3 approaches, and produce a design spec.
 
 ```
 /compozy:design "Real-time notification system"
-/compozy:design
+/compozy:design "Auth refactor" --worktree
+/compozy:design "Caching layer" --auto --repo=Discover
 ```
 
 ### `/compozy:plan [spec]`
@@ -58,7 +59,7 @@ Review a GitHub PR — checks code quality, test coverage, and requirements alig
 /compozy:code-review --context "This adds pagination to the users endpoint"
 ```
 
-### `/compozy:debug [description] [--team]`
+### `/compozy:debug [description] [--auto] [--team] [--worktree] [--repo=name]`
 
 Systematic debugging — 4-phase root cause investigation before fixing.
 
@@ -66,6 +67,8 @@ Systematic debugging — 4-phase root cause investigation before fixing.
 /compozy:debug "Tests in auth module failing after merge"
 /compozy:debug "Users seeing blank screen on login"
 /compozy:debug "Payment flow broken after deploy" --team
+/compozy:debug "Race condition in queue" --worktree
+/compozy:debug "Login broken" --auto --repo=Discover --worktree
 ```
 
 ### `/compozy:finish [branch]`
@@ -210,9 +213,10 @@ When requirements are already clear — skip design and plan, go straight to imp
 /compozy:orchestrate "Add pagination to the /users endpoint with cursor-based navigation" --auto
 ```
 
-`--auto` skips approval gates (except spec review). Combine with `--team` for thorough implementation:
+`--auto` runs fully autonomously — no questions, no gates, no stopping. Combine flags for full parallel autopilot:
 ```
 /compozy:orchestrate #42 --auto --team
+/compozy:orchestrate #42 --auto --worktree --repo=Discover
 ```
 
 ### Bug Ticket (simple)
@@ -300,13 +304,19 @@ Generate, view, or edit specs without running the full pipeline:
 | Exploring ideas, no implementation | `design` | |
 | Review someone's PR | `code-review` | |
 | Finish work on current branch | `finish` | |
+| Multiple tasks in parallel (separate terminals) | Any command | `--worktree` |
+| Fully autonomous, no interaction | Any command | `--auto` |
+| Working from multi-repo parent directory | Any command | `--repo=name` |
+| Fire-and-forget parallel on different repos | `orchestrate` or `debug` | `--auto --worktree --repo=name` |
 
 ## Tips
 
 - **Start with `/compozy:design`** for complex features — explore before committing
 - **Use `/compozy:plan`** for detailed TDD plans before implementation
 - **Review the spec carefully** in orchestrate — it's the single most important artifact
-- **Use `--auto` for well-defined tasks** — clear requirements speed things up
+- **Use `--auto` for fire-and-forget** — runs fully autonomously, no questions asked. Combine with `--worktree` and `--repo` for parallel work across repos
 - **Bug tickets don't need the full pipeline** — go straight to `/compozy:debug` → `/compozy:finish`
 - **Use `--team` for complex work** — adds reviewer/architect agents to orchestrate, 3-agent investigation to debug
+- **Use `--worktree` for parallel work** — each command runs in its own isolated git worktree, so you can open multiple terminals and run different tasks simultaneously without file conflicts
+- **Use `--repo=name` from parent directories** — if you keep repos in `~/Developer/`, run compozy from there and point at the right repo: `--repo=Discover`
 - **Add `compozy/` to `.gitignore`** if you don't want spec artifacts tracked

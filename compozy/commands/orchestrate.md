@@ -1,6 +1,6 @@
 ---
 description: Spec-driven development orchestration — analyze requirements, generate tech specs, decompose into parallel tasks, execute, review, and create PRs
-argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto]"
+argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto] [--team] [--worktree] [--repo=name]"
 allowed-tools:
   - "Bash(gh issue view:*)"
   - "Bash(gh issue list:*)"
@@ -64,8 +64,10 @@ Parse the user's input from `$ARGUMENTS`:
 - **Empty** → use `AskUserQuestion` to ask user to describe what they want to build (they'll provide via "Other" free-text)
 
 **Flags**:
-- `--auto` → Reduce gates to only: spec approval (Phase 3) + final review (Phase 6). All other gates are skipped with best-guess defaults.
+- `--auto` → Full autopilot. Skip ALL gates and user interactions — make best-guess decisions at every checkpoint and keep driving. No `AskUserQuestion` calls. Defaults: approve spec as-is, proceed with recommended task decomposition, fix all critical+moderate review issues, include artifacts in commit, fix failing tests. The pipeline runs end-to-end without stopping.
 - `--team` → Enable team mode for Phase 5. Instead of solo implementers, dispatches implementation teams with reviewer and architect agents. See `compozy:team-agents` skill for team compositions and flow.
+- `--worktree` → Run the entire pipeline in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before any work begins (Phase 0). This allows running multiple Claude instances on different tasks in parallel without file conflicts.
+- `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting the pipeline. Example: `--repo=Discover` will `cd Discover` first. If the directory doesn't exist, report an error.
 
 ---
 
@@ -74,17 +76,18 @@ Parse the user's input from `$ARGUMENTS`:
 **Goal**: Initialize the orchestration environment and determine the working directory
 
 **Actions**:
-1. Detect the input source type and load the PRD content
-2. Check for `--auto` flag in arguments
-3. **Generate the branch name** from the input:
+1. **Repository selection** — If `--repo=<name>` is set, `cd` into that directory first. Verify it's a git repository (`git rev-parse --git-dir`). If not found, report error and stop.
+2. Detect the input source type and load the PRD content
+3. Check for `--auto` flag in arguments
+4. **Generate the branch name** from the input:
    - GitHub issue: `feat/<issue-number>-<slug>` (or `fix/` for bug labels) — derive slug from issue title
    - Inline text or file: `feat/<slug>` — derive slug from the first few meaningful words
    - Rules: lowercase, hyphens for spaces, max 50 characters, no special characters
-4. **Sanitize for directory use**: replace `/` with `-` to get the directory name
-5. Create `compozy/<sanitized-branch-name>/files/` directory (the `$COMPOZY_DIR`)
-6. **Optional: Worktree creation** — If the user requests isolation or you're in a shared workspace, use the `compozy:worktrees` skill to create an isolated worktree for this work.
-7. Create todo list tracking all 7 phases
-8. Save initial checkpoint:
+5. **Sanitize for directory use**: replace `/` with `-` to get the directory name
+6. Create `compozy/<sanitized-branch-name>/files/` directory (the `$COMPOZY_DIR`)
+7. **Worktree creation** — If `--worktree` flag is set, use the `compozy:worktrees` skill to create an isolated worktree for this work. All subsequent phases run inside the worktree. This enables running multiple Claude instances on different tasks in parallel.
+8. Create todo list tracking all 7 phases
+9. Save initial checkpoint:
 
 ```markdown
 # Checkpoint
@@ -195,7 +198,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 ---
 
-## Phase 3: Tech Spec Generation `[GATE always — even with --auto]`
+## Phase 3: Tech Spec Generation `[GATE unless --auto]`
 
 **Goal**: Generate a complete, implementation-ready technical specification
 
@@ -230,7 +233,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    ...
    ```
 
-4. **Gate** (always, even with `--auto`) — use `AskUserQuestion`:
+4. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "Review the spec at $COMPOZY_DIR/tech-spec.md. How would you like to proceed?"
@@ -246,6 +249,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    ```
    - If "Revise" or "Other" with feedback: re-run spec-generator with feedback, present again
    - If "Edit manually": wait for user to finish editing, then re-present for approval
+   - If `--auto`: approve spec as-is and proceed
 
 5. Update checkpoint:
 ```markdown
@@ -428,7 +432,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - [Any cross-component problems from integration-validator]
    ```
 
-4. **Gate** (always) — present consolidated review, then use `AskUserQuestion`:
+4. **Gate** (skip if `--auto`) — present consolidated review, then use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "How would you like to proceed with the review findings?"
@@ -446,6 +450,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    ```
    - If fixing: launch `task-implementer` agents for fixes, then re-run validation on changed files
    - If "Abort": clean up and exit
+   - If `--auto`: fix all critical and moderate issues, then proceed
 
 5. Update checkpoint:
 ```markdown
@@ -467,7 +472,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - Look for test runners: `package.json` scripts, `pytest`, `go test`, `cargo test`, `Makefile` test target
    - Run the appropriate test command
    - Read the output completely — count passes, failures, errors
-   - If tests fail, use `AskUserQuestion`:
+   - If tests fail, use `AskUserQuestion` (skip if `--auto`):
      ```
      AskUserQuestion:
        question: "Tests failed. How would you like to proceed?"
@@ -481,8 +486,9 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
            description: "Stop the pipeline"
        multiSelect: false
      ```
+   - If `--auto` and tests fail: attempt to fix failing tests automatically, re-run, and proceed
 
-2. **Ask about artifacts** — use `AskUserQuestion`:
+2. **Ask about artifacts** (skip if `--auto`) — use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "Include compozy/ spec artifacts in the commit?"
@@ -494,6 +500,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
          description: "Keep the commit clean, artifacts stay local only"
      multiSelect: false
    ```
+   - If `--auto`: include artifacts in the commit
 
 3. **Launch `pr-assembler` agent** (sonnet):
    - `subagent_type`: `compozy:pr-assembler`

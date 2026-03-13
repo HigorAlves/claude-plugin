@@ -11,8 +11,8 @@
     {
       "name": "compozy",
       "source": "./compozy",
-      "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, and ship with engineering discipline. 8 commands, 13 agents, 10 skills, team mode.",
-      "version": "2.0.0",
+      "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, and ship with engineering discipline. 8 commands, 13 agents, 10 skills. Flags: --auto, --team, --worktree, --repo.",
+      "version": "2.1.0",
       "category": "development",
       "tags": ["orchestration", "spec", "prd", "workflow", "tasks", "tdd", "debugging"]
     },
