@@ -1,4 +1,5 @@
 ---
+name: pr-assembler
 description: Generates branch names, commit messages, and PR descriptions from completed implementation work. Creates the branch, commits, pushes, and opens the PR. Use this agent in the final phase of orchestration.
 model: sonnet
 color: cyan

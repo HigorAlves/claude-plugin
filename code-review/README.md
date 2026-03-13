@@ -1,293 +1,77 @@
 # Code Review Plugin
 
-Automated code review for pull requests using multiple specialized agents with confidence-based scoring to filter false positives.
+Contextual code review for pull requests — checks code quality and validates requirements alignment.
 
 ## Overview
 
-The Code Review Plugin automates pull request review by launching multiple agents in parallel to independently audit changes from different perspectives. It uses confidence scoring to filter out false positives, ensuring only high-quality, actionable feedback is posted.
+Reviews PRs from two angles: **code quality** (bugs, security, guideline compliance) and **requirements alignment** (does the PR deliver what the ticket asks for). Multiple parallel agents provide independent perspectives, and every finding is validated before posting.
 
-## Commands
+All feedback is written in a natural, conversational tone — like a senior engineer on the team.
 
-### `/code-review`
+## Usage
 
-Performs automated code review on a pull request using multiple specialized agents.
-
-**What it does:**
-1. Checks if review is needed (skips closed, draft, trivial, or already-reviewed PRs)
-2. Gathers relevant CLAUDE.md guideline files from the repository
-3. Summarizes the pull request changes
-4. Launches 4 parallel agents to independently review:
-   - **Agents #1 & #2**: Audit for CLAUDE.md compliance
-   - **Agent #3**: Scan for obvious bugs in changes
-   - **Agent #4**: Analyze git blame/history for context-based issues
-5. Scores each issue 0-100 for confidence level
-6. Filters out issues below 80 confidence threshold
-7. Outputs review (to terminal by default, or as PR comment with `--comment` flag)
-
-**Usage:**
 ```bash
-/code-review [--comment]
-```
-
-**Options:**
-- `--comment`: Post the review as a comment on the pull request (default: outputs to terminal only)
-
-**Example workflow:**
-```bash
-# On a PR branch, run locally (outputs to terminal):
+# Basic code review (code quality only)
 /code-review
 
-# Post review as PR comment:
-/code-review --comment
+# Review against a Jira ticket (requires Jira MCP)
+/code-review --jira PROJ-1234
 
-# Claude will:
-# - Launch 4 review agents in parallel
-# - Score each issue for confidence
-# - Output issues ≥80 confidence (to terminal or PR depending on flag)
-# - Skip if no high-confidence issues found
+# Review against a PRD or spec file
+/code-review --prd docs/feature-spec.md
+
+# Review with free-form context
+/code-review --context "This PR adds cursor-based pagination to /users"
+
+# Combine multiple sources
+/code-review --jira PROJ-1234 --prd docs/spec.md
 ```
 
-**Features:**
-- Multiple independent agents for comprehensive review
-- Confidence-based scoring reduces false positives (threshold: 80)
-- CLAUDE.md compliance checking with explicit guideline verification
-- Bug detection focused on changes (not pre-existing issues)
-- Historical context analysis via git blame
-- Automatic skipping of closed, draft, or already-reviewed PRs
-- Links directly to code with full SHA and line ranges
+| Flag | Description |
+|------|-------------|
+| `--jira <ticket>` | Jira ticket ID or URL. Fetches details via Jira MCP. |
+| `--prd <file>` | Path to a requirements/spec document. |
+| `--context <text>` | Free-form description of expected behavior. |
 
-**Review comment format:**
+## How It Works
 
-Comments use Conventional Commit prefixes (`fix:`, `perf:`, `security:`, etc.) and are written in a natural, conversational tone:
+1. **Eligibility** — skips closed, draft, trivial, or already-reviewed PRs
+2. **Project guidelines** — finds relevant CLAUDE.md files
+3. **Requirements context** — fetches Jira ticket, reads PRD, or uses provided context
+4. **PR summary** — what changed and why
+5. **Parallel code review** — 4 agents check guidelines compliance, bugs, and security
+6. **Requirements alignment** — checks coverage, gaps, and drift against the ticket/spec
+7. **Validation** — independent subagents confirm every finding
+8. **Review** — posts inline comments + summary via GitHub pending review
 
-```markdown
-## Code review
+## Requirements Alignment
 
-Found 3 issues:
+When context is provided (`--jira`, `--prd`, `--context`), the review also checks:
 
-1. fix: This OAuth callback doesn't have error handling yet, which could leave users stuck if the auth flow fails. Our error handling guidelines mention this - worth wrapping in a try-catch.
-
-https://github.com/owner/repo/blob/abc123.../src/auth.ts#L67-L72
-
-2. fix: I noticed the OAuth state isn't getting cleaned up in the finally block. This could accumulate memory over time on long-running servers.
-
-https://github.com/owner/repo/blob/abc123.../src/auth.ts#L88-L95
-
-3. refactor: Quick note on the naming here - per our conventions, functions should use camelCase. This one's using snake_case.
-
-https://github.com/owner/repo/blob/abc123.../src/utils.ts#L23-L28
-```
-
-**Confidence scoring:**
-- **0**: Not confident, false positive
-- **25**: Somewhat confident, might be real
-- **50**: Moderately confident, real but minor
-- **75**: Highly confident, real and important
-- **100**: Absolutely certain, definitely real
-
-**False positives filtered:**
-- Pre-existing issues not introduced in PR
-- Code that looks like a bug but isn't
-- Pedantic nitpicks
-- Issues linters will catch
-- General quality issues (unless in CLAUDE.md)
-- Issues with lint ignore comments
+- **Coverage** — Does the PR implement what's required?
+- **Gaps** — Edge cases or constraints not handled
+- **Partial** — Requirements only partly addressed
+- **Drift** — Work outside ticket scope (informational)
 
 ## Comment Style
 
-### Conventional Commit Prefixes
+Comments use Conventional Commit prefixes (`fix:`, `perf:`, `security:`, etc.) and read like a colleague's feedback:
 
-Comments are prefixed with a type that indicates the category of issue:
-
-| Prefix | Usage |
-|--------|-------|
-| `fix:` | Bugs, errors, incorrect logic, runtime failures |
-| `perf:` | Performance issues, memory leaks, inefficient patterns |
-| `security:` | Vulnerabilities, unsafe operations, data exposure |
-| `refactor:` | Code structure issues, maintainability concerns |
-| `docs:` | Documentation issues, misleading comments |
-| `chore:` | Build/config problems, dependency issues |
-
-### Human-Like Tone
-
-Comments are written as a helpful colleague would - conversational, empathetic, and focused on explaining WHY something matters:
-
-| Robotic (Avoid) | Human-Like (Preferred) |
-|-----------------|------------------------|
-| `Missing error handling for OAuth callback (CLAUDE.md says "Always handle OAuth errors")` | `fix: This OAuth callback doesn't have error handling yet, which could leave users stuck if the auth flow fails. Our error handling guidelines mention this - worth wrapping in a try-catch.` |
-| `Memory leak: state not cleaned up` | `fix: I noticed the OAuth state isn't getting cleaned up in the finally block. This could accumulate memory over time on long-running servers.` |
-| `Performance issue: N+1 query pattern` | `perf: This looks like it might hit the database once per item - a classic N+1 situation. Batching these queries could help if the list grows.` |
-
-**Key principles:**
-- Use varied opening phrases ("I noticed...", "Worth flagging...", "Quick note on...")
-- Explain the impact, not just the violation
-- Reference guidelines naturally ("per our guidelines" not "CLAUDE.md says")
-- Frame suggestions helpfully ("consider...", "this might help...")
-
-## Installation
-
-This plugin is included in the Claude Code repository. The command is automatically available when using Claude Code.
-
-## Best Practices
-
-### Using `/code-review`
-- Maintain clear CLAUDE.md files for better compliance checking
-- Trust the 80+ confidence threshold - false positives are filtered
-- Run on all non-trivial pull requests
-- Review agent findings as a starting point for human review
-- Update CLAUDE.md based on recurring review patterns
-
-### When to use
-- All pull requests with meaningful changes
-- PRs touching critical code paths
-- PRs from multiple contributors
-- PRs where guideline compliance matters
-
-### When not to use
-- Closed or draft PRs (automatically skipped anyway)
-- Trivial automated PRs (automatically skipped)
-- Urgent hotfixes requiring immediate merge
-- PRs already reviewed (automatically skipped)
-
-## Workflow Integration
-
-### Standard PR review workflow:
-```bash
-# Create PR with changes
-# Run local review (outputs to terminal)
-/code-review
-
-# Review the automated feedback
-# Make any necessary fixes
-
-# Optionally post as PR comment
-/code-review --comment
-
-# Merge when ready
 ```
-
-### As part of CI/CD:
-```bash
-# Trigger on PR creation or update
-# Use --comment flag to post review comments
-/code-review --comment
-# Skip if review already exists
+fix: This OAuth callback doesn't handle errors — if the auth flow fails,
+users will see a blank screen. Worth wrapping in a try-catch.
 ```
 
 ## Requirements
 
-- Git repository with GitHub integration
 - GitHub CLI (`gh`) installed and authenticated
-- CLAUDE.md files (optional but recommended for guideline checking)
-
-## Troubleshooting
-
-### Review takes too long
-
-**Issue**: Agents are slow on large PRs
-
-**Solution**:
-- Normal for large changes - agents run in parallel
-- 4 independent agents ensure thoroughness
-- Consider splitting large PRs into smaller ones
-
-### Too many false positives
-
-**Issue**: Review flags issues that aren't real
-
-**Solution**:
-- Default threshold is 80 (already filters most false positives)
-- Make CLAUDE.md more specific about what matters
-- Consider if the flagged issue is actually valid
-
-### No review comment posted
-
-**Issue**: `/code-review` runs but no comment appears
-
-**Solution**:
-Check if:
-- PR is closed (reviews skipped)
-- PR is draft (reviews skipped)
-- PR is trivial/automated (reviews skipped)
-- PR already has review (reviews skipped)
-- No issues scored ≥80 (no comment needed)
-
-### Link formatting broken
-
-**Issue**: Code links don't render correctly in GitHub
-
-**Solution**:
-Links must follow this exact format:
-```
-https://github.com/owner/repo/blob/[full-sha]/path/file.ext#L[start]-L[end]
-```
-- Must use full SHA (not abbreviated)
-- Must use `#L` notation
-- Must include line range with at least 1 line of context
-
-### GitHub CLI not working
-
-**Issue**: `gh` commands fail
-
-**Solution**:
-- Install GitHub CLI: `brew install gh` (macOS) or see [GitHub CLI installation](https://cli.github.com/)
-- Authenticate: `gh auth login`
-- Verify repository has GitHub remote
-
-## Tips
-
-- **Write specific CLAUDE.md files**: Clear guidelines = better reviews
-- **Include context in PRs**: Helps agents understand intent
-- **Use confidence scores**: Issues ≥80 are usually correct
-- **Iterate on guidelines**: Update CLAUDE.md based on patterns
-- **Review automatically**: Set up as part of PR workflow
-- **Trust the filtering**: Threshold prevents noise
-- **Human-like feedback is more actionable**: Conversational comments that explain WHY get addressed faster than robotic rule citations
-
-## Configuration
-
-### Adjusting confidence threshold
-
-The default threshold is 80. To adjust, modify the command file at `commands/code-review.md`:
-```markdown
-Filter out any issues with a score less than 80.
-```
-
-Change `80` to your preferred threshold (0-100).
-
-### Customizing review focus
-
-Edit `commands/code-review.md` to add or modify agent tasks:
-- Add security-focused agents
-- Add performance analysis agents
-- Add accessibility checking agents
-- Add documentation quality checks
-
-## Technical Details
-
-### Agent architecture
-- **2x CLAUDE.md compliance agents**: Redundancy for guideline checks
-- **1x bug detector**: Focused on obvious bugs in changes only
-- **1x history analyzer**: Context from git blame and history
-- **Nx confidence scorers**: One per issue for independent scoring
-
-### Scoring system
-- Each issue independently scored 0-100
-- Scoring considers evidence strength and verification
-- Threshold (default 80) filters low-confidence issues
-- For CLAUDE.md issues: verifies guideline explicitly mentions it
-
-### GitHub integration
-Uses `gh` CLI for:
-- Viewing PR details and diffs
-- Fetching repository data
-- Reading git blame and history
-- Posting review comments
+- Jira MCP server (optional, for `--jira`)
+- CLAUDE.md files (optional, for guideline checks)
 
 ## Author
 
-Boris Cherny (boris@anthropic.com)
+Higor Alves (me@higoralves.dev)
 
 ## Version
 
-1.0.0
+2.0.0

@@ -9,8 +9,6 @@ You are helping a developer implement a new feature. Follow a systematic approac
 
 ## Core Principles
 
-- **Never add AI attribution** - Do not include "Generated with Claude", "AI-generated", or any similar references in code, comments, commits, or PR descriptions
-- **Never mention "CLAUDE.md"** - Refer to "project guidelines" or "our guidelines" instead in any output
 - **Ask clarifying questions**: Identify all ambiguities, edge cases, and underspecified behaviors. Ask specific, concrete questions rather than making assumptions. Wait for user answers before proceeding with implementation. Ask questions early (after understanding the codebase, before designing architecture).
 - **Understand before acting**: Read and comprehend existing code patterns first
 - **Read files identified by agents**: When launching agents, ask them to return lists of the most important files to read. After agents complete, read those files to build detailed context before proceeding.

@@ -44,8 +44,3 @@ Start by clearly stating what you're reviewing. For each high-confidence issue, 
 Group issues by severity (Critical vs Important). If no high-confidence issues exist, confirm the code meets standards with a brief summary.
 
 Structure your response for maximum actionability - developers should know exactly what to fix and why.
-
-## Output Rules
-
-- **Never mention "CLAUDE.md"** - Refer to "project guidelines", "our guidelines", or "the style guide" instead
-- **Never add AI attribution** - Do not mention "Claude", "AI", or similar references. Write as a human reviewer would.

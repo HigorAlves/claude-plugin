@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# SessionStart hook for compozy plugin
+
+set -euo pipefail
+
+# Determine plugin root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Read using-compozy content
+using_compozy_content=$(cat "${PLUGIN_ROOT}/skills/using-compozy/SKILL.md" 2>&1 || echo "Error reading using-compozy skill")
+
+# Escape string for JSON embedding using bash parameter substitution.
+escape_for_json() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
+using_compozy_escaped=$(escape_for_json "$using_compozy_content")
+session_context="<EXTREMELY_IMPORTANT>\nYou have compozy.\n\n**Below is the full content of your 'compozy:using-compozy' skill — your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_compozy_escaped}\n</EXTREMELY_IMPORTANT>"
+
+# Output context injection as JSON.
+# Claude Code hooks expect hookSpecificOutput.additionalContext.
+# Other platforms expect additional_context.
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "${session_context}"
+  }
+}
+EOF
+else
+  cat <<EOF
+{
+  "additional_context": "${session_context}"
+}
+EOF
+fi
+
+exit 0

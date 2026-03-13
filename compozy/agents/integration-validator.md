@@ -1,4 +1,5 @@
 ---
+name: integration-validator
 description: Validates cross-task integration after parallel implementation — checks imports resolve, interfaces match, components wire together correctly, and the build passes. Use this agent after task execution waves complete.
 model: sonnet
 color: yellow

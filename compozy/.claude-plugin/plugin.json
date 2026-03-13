@@ -1,7 +1,7 @@
 {
   "name": "compozy",
-  "version": "1.0.2",
-  "description": "Spec-driven development orchestration: PRD to PR with parallel task execution and quality gates",
+  "version": "2.0.0",
+  "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, and ship with engineering discipline",
   "author": {
     "name": "Claude Helpers"
   }

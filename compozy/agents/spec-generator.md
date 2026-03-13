@@ -1,4 +1,5 @@
 ---
+name: spec-generator
 description: Generates complete technical specifications from analyzed requirements and codebase context. Uses the spec-authoring skill for templates and conventions. Use this agent after PRD analysis and codebase discovery.
 model: opus
 color: green

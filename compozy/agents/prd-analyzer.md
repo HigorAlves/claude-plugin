@@ -1,4 +1,5 @@
 ---
+name: prd-analyzer
 description: Analyzes product requirements documents, extracts structured requirements, identifies gaps and ambiguities, and generates clarifying questions. Use this agent when parsing PRDs, GitHub issues, or feature descriptions into structured requirements.
 model: opus
 color: blue

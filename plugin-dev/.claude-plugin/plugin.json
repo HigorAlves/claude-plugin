@@ -1,8 +1,0 @@
-{
-  "name": "plugin-dev",
-  "version": "1.0.2",
-  "description": "Comprehensive toolkit for developing Claude Code plugins with expert guidance on hooks, MCP, agents, commands, and skills",
-  "author": {
-    "name": "Claude Helpers"
-  }
-}

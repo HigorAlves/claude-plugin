@@ -1,4 +1,5 @@
 ---
+name: task-decomposer
 description: Decomposes technical specifications into parallel-safe task manifests with waves, dependencies, and file ownership. Use this agent after a tech spec is approved.
 model: sonnet
 color: cyan
@@ -104,6 +105,27 @@ Before returning, verify using the task manifest validation checklist:
 8. No wave has more than 5 tasks (practical parallel limit)
 9. Every task has a clear, testable description
 
+## TDD Task Structure
+
+Each task should follow TDD discipline. Include a **Testing** section per task that specifies:
+
+1. **Which tests to write first** — list the failing tests that define the expected behavior
+2. **What each test verifies** — one behavior per test, clear name, real code (not mocks)
+3. **Verification commands** — exact command to run tests and expected output
+
+The task steps should follow this pattern:
+- Write failing test → Verify it fails → Implement minimal code → Verify it passes → Commit
+
+Example per-task testing section:
+```markdown
+**Testing:**
+- `test('returns preferences for user')` — verifies GET returns all 9 category entries
+- `test('updates preferences')` — verifies PUT changes and returns updated prefs
+- `test('throws NotFoundError for unknown user')` — verifies 404 behavior
+
+Run: `npm test src/services/__tests__/preferences.test.ts`
+```
+
 ## Guidelines
 
 1. **Err on fewer, larger tasks**: 4-6 substantial tasks are better than 12 tiny ones. Agent context switches are expensive.
@@ -111,3 +133,4 @@ Before returning, verify using the task manifest validation checklist:
 3. **Front-load shared code**: Getting types and interfaces right in Wave 1 prevents rework in later waves.
 4. **Don't split what's connected**: If a service and its tests are tightly coupled, put them in the same task.
 5. **Be explicit about what changes**: For "modify" operations, describe exactly what changes — "Add a new method `shouldNotify` to the existing NotificationService class".
+6. **Tests live with implementation**: Test files belong to the task that implements the code being tested. Each task produces both production code and its tests.

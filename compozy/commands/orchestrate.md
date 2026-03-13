@@ -81,8 +81,9 @@ Parse the user's input from `$ARGUMENTS`:
    - Rules: lowercase, hyphens for spaces, max 50 characters, no special characters
 4. **Sanitize for directory use**: replace `/` with `-` to get the directory name
 5. Create `compozy/<sanitized-branch-name>/files/` directory (the `$COMPOZY_DIR`)
-6. Create todo list tracking all 7 phases
-7. Save initial checkpoint:
+6. **Optional: Worktree creation** — If the user requests isolation or you're in a shared workspace, use the `compozy:worktrees` skill to create an isolated worktree for this work.
+7. Create todo list tracking all 7 phases
+8. Save initial checkpoint:
 
 ```markdown
 # Checkpoint
@@ -334,7 +335,16 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
         - Codebase conventions from Phase 2
         - What was built in previous waves (available types/interfaces)
 
-   b. **Collect results** from all task agents
+   b. **Collect results and handle implementer status** from all task agents:
+
+      - **`DONE`** → Proceed normally, task ready for review
+      - **`DONE_WITH_CONCERNS`** → Read the concerns. If critical (file grew too large, design issue found), address before review. If minor, note for review phase.
+      - **`NEEDS_CONTEXT`** → Provide the requested context and re-dispatch the task agent
+      - **`BLOCKED`** → Assess the blocker:
+        - Context problem → provide context, re-dispatch
+        - Reasoning limit → re-dispatch with opus model
+        - Task too large → decompose into subtasks
+        - Spec/plan wrong → escalate to user with `AskUserQuestion`
 
    c. **Update progress** in `$COMPOZY_DIR/progress.md`:
       ```markdown
@@ -343,14 +353,14 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
       **Tasks**: [N]/[N] succeeded
 
       ### T-[ID]: [Title]
-      - Status: completed
+      - Status: completed | done_with_concerns | blocked
       - Files created: [list]
       - Files modified: [list]
-      - Notes: [any issues]
+      - Notes: [any issues or concerns]
       ```
 
    d. **Handle failures**:
-      - If a task fails: log the failure, mark dependents as "skipped"
+      - If a task fails or remains blocked after re-dispatch: log the failure, mark dependents as "skipped"
       - Continue with independent tasks in the same wave
       - Report all failures in Phase 6
 
@@ -369,23 +379,36 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 ## Phase 6: Integration & Review `[GATE always]`
 
-**Goal**: Validate integration and review code quality
+**Goal**: Validate integration and review code quality through a two-stage review process
 
 **Actions**:
-1. **Integration validation**: Launch `integration-validator` agent (sonnet):
-   - `subagent_type`: `compozy:integration-validator`
-   - `model`: `sonnet`
-   - Provide: tech spec, task manifest, all file paths, progress notes
 
-2. **Quality review**: Launch 3 `quality-reviewer` agents in parallel (sonnet):
-   - `subagent_type`: `compozy:quality-reviewer`
-   - `model`: `sonnet`
-   - Agent 1 focus: **correctness** (spec compliance, logic errors, data integrity)
-   - Agent 2 focus: **quality** (conventions, DRY, simplicity)
-   - Agent 3 focus: **robustness** (error handling, edge cases, security)
-   - Each receives: tech spec, file list, codebase conventions
+1. **Stage 1 — Integration + Spec Compliance** (run in parallel):
 
-3. **Consolidate findings** into severity categories:
+   a. Launch `integration-validator` agent (sonnet):
+      - `subagent_type`: `compozy:integration-validator`
+      - `model`: `sonnet`
+      - Provide: tech spec, task manifest, all file paths, progress notes
+
+   b. Launch `spec-compliance-reviewer` agent (sonnet):
+      - `subagent_type`: `compozy:spec-compliance-reviewer`
+      - `model`: `sonnet`
+      - Provide: tech spec, task manifest with completion notes, implementer reports, all file paths
+      - This agent independently verifies code matches spec — does NOT trust implementer reports
+
+   c. **Gate Stage 1**: Spec compliance MUST pass (✅) before proceeding to Stage 2.
+      - If ❌ Issues found: fix the spec compliance issues first (launch task-implementer agents), then re-run Stage 1
+      - If ✅ Spec compliant: proceed to Stage 2
+
+2. **Stage 2 — Code Quality** (only after Stage 1 passes):
+
+   Launch `code-quality-reviewer` agent (sonnet):
+   - `subagent_type`: `compozy:code-quality-reviewer`
+   - `model`: `sonnet`
+   - Provide: tech spec, file list, codebase conventions
+   - Reviews: code quality, architecture, testing, robustness
+
+3. **Consolidate findings** from both stages into severity categories:
    ```
    ## Review Results
 
@@ -399,7 +422,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - [Issue description]
 
    ### Integration Issues
-   - [Any cross-component problems]
+   - [Any cross-component problems from integration-validator]
    ```
 
 4. **Gate** (always) — present consolidated review, then use `AskUserQuestion`:
@@ -437,9 +460,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Goal**: Package everything into a pull request
 
 **Actions**:
-1. **Run tests** (if detected):
+1. **Verification discipline**: Run the full test suite, read the output, and confirm pass BEFORE creating the PR. Do not trust previous test runs — run fresh.
    - Look for test runners: `package.json` scripts, `pytest`, `go test`, `cargo test`, `Makefile` test target
    - Run the appropriate test command
+   - Read the output completely — count passes, failures, errors
    - If tests fail, use `AskUserQuestion`:
      ```
      AskUserQuestion:

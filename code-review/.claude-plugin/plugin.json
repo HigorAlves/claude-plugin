@@ -1,7 +1,7 @@
 {
   "name": "code-review",
-  "description": "Automated code review for pull requests using multiple specialized agents with confidence-based scoring",
-  "version": "1.0.2",
+  "description": "Contextual code review for pull requests — checks code quality, test coverage, and requirements alignment with a team of specialized review agents",
+  "version": "2.0.0",
   "author": {
     "name": "Higor Alves",
     "email": "me@higoralves.dev"
