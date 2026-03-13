@@ -59,7 +59,7 @@ Review a GitHub PR — checks code quality, test coverage, and requirements alig
 /compozy:code-review --context "This adds pagination to the users endpoint"
 ```
 
-### `/compozy:debug [description] [--auto] [--team] [--worktree] [--repo=name]`
+### `/compozy:debug [description] [--auto] [--team] [--worktree] [--repo=name] [--pr]`
 
 Systematic debugging — 4-phase root cause investigation before fixing.
 
@@ -68,7 +68,7 @@ Systematic debugging — 4-phase root cause investigation before fixing.
 /compozy:debug "Users seeing blank screen on login"
 /compozy:debug "Payment flow broken after deploy" --team
 /compozy:debug "Race condition in queue" --worktree
-/compozy:debug "Login broken" --auto --repo=Discover --worktree
+/compozy:debug "Login broken" --auto --pr --repo=Discover --worktree
 ```
 
 ### `/compozy:finish [branch]`
@@ -233,9 +233,11 @@ This runs the full 4-phase process:
 3. **Hypothesis testing** — smallest change to test theory
 4. **TDD fix** — failing test → green → refactor
 
-Then finish the branch:
+Then either finish manually or use `--pr` for end-to-end:
 ```
-/compozy:finish
+/compozy:finish                              → manual: choose merge/PR/keep
+/compozy:debug "bug description" --pr        → auto-creates PR after fix
+/compozy:debug "bug description" --auto --pr → fully autonomous: debug → fix → PR
 ```
 
 ### Bug Ticket (complex / multi-component)
@@ -299,8 +301,10 @@ Generate, view, or edit specs without running the full pipeline:
 | Complex feature, unclear requirements | `design → plan → orchestrate` | |
 | Feature with clear requirements | `orchestrate` | `--auto` |
 | High-stakes feature, need extra review | `design → plan → orchestrate` | `--team` |
-| Simple bug, clear reproduction | `debug → finish` | |
+| Simple bug, clear reproduction | `debug` | `--pr` |
+| Simple bug, fully autonomous | `debug` | `--auto --pr` |
 | Complex bug, multiple subsystems | `debug → code-review → finish` | `--team` |
+| Complex bug, fully autonomous with PR | `debug` | `--auto --team --pr` |
 | Exploring ideas, no implementation | `design` | |
 | Review someone's PR | `code-review` | |
 | Finish work on current branch | `finish` | |

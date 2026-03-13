@@ -1,6 +1,6 @@
 ---
 description: Systematic debugging — find root cause before fixing, with structured investigation phases
-argument-hint: "[bug description, error message, or test failure] [--auto] [--team] [--worktree] [--repo=name]"
+argument-hint: "[bug description, error message, or test failure] [--auto] [--team] [--worktree] [--repo=name] [--pr]"
 allowed-tools:
   - Read
   - Write
@@ -18,6 +18,8 @@ allowed-tools:
   - "Bash(pip *:*)"
   - "Bash(make *:*)"
   - "Bash(git *)"
+  - "Bash(gh pr create:*)"
+  - "Bash(gh pr view:*)"
 ---
 
 # Compozy Debug
@@ -45,6 +47,7 @@ If you haven't completed Phase 1, you cannot propose fixes.
 - `--team` → Enable team debugging. Dispatches 3 investigation agents in parallel (Data Flow Tracer, Change Analyst, Pattern Scout), then synthesizes findings. See `compozy:team-agents` skill for the full Debugging Team pattern.
 - `--worktree` → Run debugging in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before investigation begins. This allows running multiple Claude instances on different bugs in parallel without file conflicts. The worktree branch is named `fix/<bug-slug>`.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=Discover` will `cd Discover` first.
+- `--pr` → After fixing the bug, automatically create a branch (if not already on one), commit, push, and open a pull request. Runs Phase 5 (PR Creation) after Phase 4. Implies committing the fix.
 
 ## Process
 
@@ -208,6 +211,32 @@ AskUserQuestion:
   multiSelect: false
 ```
 If `--auto`: commit the fix automatically.
+
+### Phase 5: PR Creation (if `--pr`)
+
+If `--pr` flag is set, after the fix is committed:
+
+1. **Ensure on a branch** — If on `main`/`master`, create and switch to `fix/<bug-slug>`
+2. **Run full test suite** — verify everything passes before pushing
+3. **Push** — `git push -u origin <branch>`
+4. **Create PR**:
+   ```bash
+   gh pr create --title "fix: <short bug description>" --body "$(cat <<'EOF'
+   ## Summary
+   - Root cause: <1-line root cause>
+   - Fix: <1-line fix description>
+
+   ## Test Plan
+   - [x] Failing test added reproducing the bug
+   - [x] Fix implemented, test passes
+   - [x] Full test suite passes
+   EOF
+   )"
+   ```
+5. **Report PR URL**
+6. **Cleanup worktree** (if `--worktree` was used): `git worktree remove <path>`
+
+If `--auto` + `--pr`: the entire flow runs without stopping — debug → fix → commit → push → PR.
 
 ## Red Flags — STOP and Return to Phase 1
 
