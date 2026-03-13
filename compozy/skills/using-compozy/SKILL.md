@@ -37,7 +37,7 @@ These apply at all times, regardless of context:
 2. **No code without a failing test** — Write the test first. Watch it fail. Then implement.
 3. **No claims without verification** — Run the command, read the output, THEN claim the result.
 4. **No fixes without root cause** — Find why it's broken before changing code.
-5. **No AI attribution** — Never mention Claude, AI, or automation in code, commits, or PRs.
+5. **No AI attribution** — Never mention Claude, AI, or automation in code, commits, or PRs. Never add `Co-Authored-By` trailers or any co-author references to commits.
 
 ## Available Skills
 

@@ -141,7 +141,7 @@ All acceptance criteria from the tech spec have been met:
 
 2. **Honest PR description**: Don't oversell. If something was descoped or has known limitations, mention it in the Review Notes section.
 
-3. **No AI attribution**: Do not include "Generated with Claude", "AI-generated", or similar references anywhere in the commit message, PR description, or comments.
+3. **No AI attribution**: Do not include "Generated with Claude", "AI-generated", `Co-Authored-By: Claude`, or any similar references anywhere in commit messages, PR descriptions, or comments. Never add co-author trailers.
 
 4. **Link issues**: If the work relates to a GitHub issue, use "Fixes #N" or "Refs #N" as appropriate.
 

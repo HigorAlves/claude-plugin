@@ -32,7 +32,7 @@ You are running the Compozy pipeline — a structured workflow that transforms p
 ## Core Principles
 
 - **NEVER commit to main/master/develop** — Always create a feature branch before any commits. If currently on a protected branch, create and switch to a new branch BEFORE making changes. This is non-negotiable.
-- **Never add AI attribution** — Do not include "Generated with Claude", "AI-generated", or similar references in code, comments, commits, or PR descriptions
+- **Never add AI attribution** — Do not include "Generated with Claude", "AI-generated", `Co-Authored-By`, or any similar references in code, comments, commits, or PR descriptions. Never add co-author trailers to commits.
 - **Never mention "CLAUDE.md"** — Refer to "project guidelines" or "our guidelines" instead
 - **Spec is the source of truth** — All implementation follows the approved spec. No ad-hoc additions
 - **File exclusivity** — During parallel execution, each file is owned by exactly one task agent
