@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "A collection of productivity plugins for Claude Code — development orchestration, code review, PR management, issue discovery, git workflows, output styles, and frontend design",
-    "version": "2.0.0"
+    "version": "2.1.0"
   },
   "plugins": [
     {
       "name": "compozy",
       "source": "./compozy",
       "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. 9 commands, 13 agents, 10 skills. Flags: --auto, --team, --worktree, --repo.",
-      "version": "2.2.0",
+      "version": "2.3.0",
       "category": "development",
       "tags": ["orchestration", "spec", "prd", "workflow", "tasks", "tdd", "debugging"]
     },
