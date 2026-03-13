@@ -27,7 +27,7 @@ The main pipeline. Takes a product requirement and produces a pull request.
 | 6 | Integration & Review | **Always** | Two-stage review: spec compliance → code quality |
 | 7 | PR Generation | No | Verify tests, create branch, commit, push, open PR |
 
-*With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
+*With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 3 adds spec critic + testability reviewer, Phase 4 adds dependency auditor + complexity estimator, and Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
 
 ### `/compozy:design [topic] [--auto] [--worktree] [--repo=name]`
 

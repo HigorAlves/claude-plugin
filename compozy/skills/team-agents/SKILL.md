@@ -54,7 +54,76 @@ digraph when_to_use {
 
 ## Team Compositions
 
-### Implementation Team (orchestrate --team)
+### Spec Review Team (orchestrate --team, Phase 3)
+
+Used during Phase 3 (Tech Spec Generation). After the spec-generator produces the spec, two reviewers validate it before the user sees it.
+
+**Roles:**
+1. **Spec Critic** — Reviews for gaps, weaknesses, and over-engineering
+2. **Testability Reviewer** — Ensures every requirement is verifiable
+
+**Flow:**
+```
+Phase 3 (after spec generation):
+  1. Dispatch both reviewers in parallel with the generated spec + codebase context
+  2. Spec Critic: "Review this tech spec for:
+      - Missing edge cases or error scenarios
+      - Unclear or ambiguous interfaces
+      - Over-engineering (YAGNI violations)
+      - Inconsistencies with existing codebase patterns
+      - Missing non-functional requirements (performance, security)
+      Report issues by severity."
+  3. Testability Reviewer: "Review this tech spec for:
+      - Acceptance criteria that can't be tested (vague, subjective)
+      - Interfaces that can't be mocked or stubbed
+      - Missing test scenarios for each component
+      - Dependencies that make testing hard
+      Report untestable items and suggest how to make them testable."
+  4. Synthesize findings
+  5. If critical issues: re-run spec-generator with feedback, then re-review
+  6. If clean: present spec to user for approval
+```
+
+**Why this helps:**
+- Catches spec gaps BEFORE implementation (10x cheaper than fixing code)
+- Testability review prevents "we can't test this" surprises in Phase 5
+- Two perspectives: one on design quality, one on verifiability
+
+### Decomposition Review Team (orchestrate --team, Phase 4)
+
+Used during Phase 4 (Task Decomposition). After the task-decomposer produces the manifest, two reviewers validate it before execution.
+
+**Roles:**
+1. **Dependency Auditor** — Validates task ordering and isolation
+2. **Complexity Estimator** — Flags tasks that need splitting or special attention
+
+**Flow:**
+```
+Phase 4 (after task decomposition):
+  1. Dispatch both reviewers in parallel with the manifest + tech spec
+  2. Dependency Auditor: "Review this task manifest for:
+      - Hidden dependencies between tasks in the same wave
+      - File exclusivity violations (two tasks touching the same file)
+      - Incorrect wave ordering (task depends on something not yet built)
+      - Missing interface contracts between waves
+      Report ordering issues and file conflicts."
+  3. Complexity Estimator: "Review this task manifest for:
+      - Tasks that are too large (should be split into subtasks)
+      - High-risk tasks that need opus model instead of sonnet
+      - Acceptance criteria that are too vague to implement
+      - Tasks with unclear scope boundaries
+      Flag tasks and suggest adjustments."
+  4. Synthesize findings
+  5. If wave ordering or file exclusivity is wrong: re-run task-decomposer with feedback
+  6. If clean: present manifest to user for approval
+```
+
+**Why this helps:**
+- Prevents parallel execution conflicts (file exclusivity violations = broken builds)
+- Catches tasks too large for a single agent (avoids BLOCKED status in Phase 5)
+- Validates wave ordering before spending time on execution
+
+### Implementation Team (orchestrate --team, Phase 5)
 
 Used during Phase 5 (Task Execution). Each wave dispatches a team instead of solo implementers.
 

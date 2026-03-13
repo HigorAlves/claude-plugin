@@ -66,7 +66,7 @@ Parse the user's input from `$ARGUMENTS`:
 
 **Flags**:
 - `--auto` → Full autopilot. Skip ALL gates and user interactions — make best-guess decisions at every checkpoint and keep driving. No `AskUserQuestion` calls. Defaults: approve spec as-is, proceed with recommended task decomposition, fix all critical+moderate review issues, include artifacts in commit, fix failing tests. The pipeline runs end-to-end without stopping.
-- `--team` → Enable team mode for Phase 5. Instead of solo implementers, dispatches implementation teams with reviewer and architect agents. See `compozy:team-agents` skill for team compositions and flow.
+- `--team` → Enable team mode for Phases 3, 4, and 5. In Phase 3, a spec critic and testability reviewer validate the generated spec. In Phase 4, a dependency auditor and complexity estimator review the task breakdown. In Phase 5, implementation teams include reviewer and architect agents. See `compozy:team-agents` skill for team compositions and flow.
 - `--worktree` → Run the entire pipeline in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before any work begins (Phase 0). This allows running multiple Claude instances on different tasks in parallel without file conflicts.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting the pipeline. Example: `--repo=Discover` will `cd Discover` first. If the directory doesn't exist, report an error.
 
@@ -214,7 +214,13 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 2. Write the generated spec to `$COMPOZY_DIR/tech-spec.md`
 
-3. Present a summary to the user:
+3. **If `--team` flag is set:** Use the `compozy:team-agents` skill's Spec Review Team pattern. Dispatch 2 review agents in parallel:
+   - **Spec Critic** — Reviews for gaps: missing edge cases, unclear interfaces, over-engineering, inconsistencies with codebase patterns
+   - **Testability Reviewer** — Checks every acceptance criterion is testable, every interface is mockable, no untestable requirements
+
+   Synthesize findings and fix the spec before presenting to the user. If critical issues found, re-run spec-generator with the feedback.
+
+4. Present a summary to the user:
    ```
    ## Tech Spec Summary
 
@@ -234,7 +240,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    ...
    ```
 
-4. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
+5. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "Review the spec at $COMPOZY_DIR/tech-spec.md. How would you like to proceed?"
@@ -252,7 +258,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - If "Edit manually": wait for user to finish editing, then re-present for approval
    - If `--auto`: approve spec as-is and proceed
 
-5. Update checkpoint:
+6. Update checkpoint:
 ```markdown
 **Phase**: 3 — Tech Spec
 **Status**: complete (approved)
@@ -277,7 +283,13 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 2. Write the manifest to `$COMPOZY_DIR/task-manifest.md`
 
-3. Present the wave/task summary table:
+3. **If `--team` flag is set:** Use the `compozy:team-agents` skill's Decomposition Review Team pattern. Dispatch 2 review agents in parallel:
+   - **Dependency Auditor** — Validates wave ordering is correct, checks for hidden dependencies between tasks, verifies file exclusivity (no two tasks in the same wave touch the same file)
+   - **Complexity Estimator** — Flags tasks that are too large (should be split), identifies high-risk tasks that need opus model, checks that acceptance criteria are specific enough to implement
+
+   Synthesize findings and fix the manifest before presenting to the user. If wave ordering or file exclusivity is wrong, re-run task-decomposer with the feedback.
+
+4. Present the wave/task summary table:
    ```
    ## Task Plan
 
@@ -290,7 +302,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    Total: 6 tasks, 3 waves, max 3 parallel
    ```
 
-4. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
+5. **Gate** (skip if `--auto`) — use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "Does this task breakdown look right?"
@@ -305,7 +317,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - If "Adjust" or "Other" with feedback: re-run decomposer with feedback
    - If `--auto`: proceed without confirmation
 
-5. Update checkpoint:
+6. Update checkpoint:
 ```markdown
 **Phase**: 4 — Task Decomposition
 **Status**: complete
