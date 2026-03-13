@@ -17,6 +17,7 @@ You are running the Compozy design flow — a structured brainstorming and desig
 
 ## Core Principles
 
+- **NEVER commit to main/master/develop** — If work produces artifacts that need committing, create a branch first. This is non-negotiable.
 - **HARD-GATE: Do NOT write code, scaffold, or take implementation action** until the design is approved
 - **One question at a time** — never present multiple questions at once
 - **Multiple choice preferred** — use `AskUserQuestion` with concrete options

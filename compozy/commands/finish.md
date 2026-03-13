@@ -24,6 +24,7 @@ You are running the Compozy finish flow — completing a development branch by v
 
 ## Core Principles
 
+- **NEVER commit to main/master/develop** — If currently on a protected branch, stop and ask the user. All work must be on a feature/fix branch.
 - **No AI attribution**
 - **Evidence before claims** — run tests, read output, then report
 - **Always use `AskUserQuestion`** for all user interactions

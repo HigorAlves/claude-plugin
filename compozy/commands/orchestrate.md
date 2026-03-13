@@ -31,6 +31,7 @@ You are running the Compozy pipeline — a structured workflow that transforms p
 
 ## Core Principles
 
+- **NEVER commit to main/master/develop** — Always create a feature branch before any commits. If currently on a protected branch, create and switch to a new branch BEFORE making changes. This is non-negotiable.
 - **Never add AI attribution** — Do not include "Generated with Claude", "AI-generated", or similar references in code, comments, commits, or PR descriptions
 - **Never mention "CLAUDE.md"** — Refer to "project guidelines" or "our guidelines" instead
 - **Spec is the source of truth** — All implementation follows the approved spec. No ad-hoc additions

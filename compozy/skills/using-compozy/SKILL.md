@@ -33,10 +33,11 @@ Use the `Skill` tool. When you invoke a skill, its content is loaded and present
 
 These apply at all times, regardless of context:
 
-1. **No code without a failing test** — Write the test first. Watch it fail. Then implement.
-2. **No claims without verification** — Run the command, read the output, THEN claim the result.
-3. **No fixes without root cause** — Find why it's broken before changing code.
-4. **No AI attribution** — Never mention Claude, AI, or automation in code, commits, or PRs.
+1. **No commits to main/master/develop** — ALWAYS create a feature or fix branch first. Check the current branch before ANY commit. If on a protected branch, create and switch to a new branch BEFORE making changes. This is non-negotiable.
+2. **No code without a failing test** — Write the test first. Watch it fail. Then implement.
+3. **No claims without verification** — Run the command, read the output, THEN claim the result.
+4. **No fixes without root cause** — Find why it's broken before changing code.
+5. **No AI attribution** — Never mention Claude, AI, or automation in code, commits, or PRs.
 
 ## Available Skills
 

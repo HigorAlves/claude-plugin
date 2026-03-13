@@ -36,6 +36,7 @@ If you haven't completed Phase 1, you cannot propose fixes.
 
 ## Core Principles
 
+- **NEVER commit to main/master/develop** — Always create a fix branch before any commits. If currently on a protected branch, create and switch to `fix/<bug-slug>` BEFORE making changes. This is non-negotiable.
 - **No AI attribution**
 - **Always use `AskUserQuestion`** for user interactions
 - **Evidence before claims** — run commands, read output, then report
