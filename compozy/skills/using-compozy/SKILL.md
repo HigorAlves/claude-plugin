@@ -50,6 +50,7 @@ These apply at all times, regardless of context:
 | `compozy:pr-review` | When reviewing code — comment tone, false positives, suggestion guidelines |
 | `compozy:branch-completion` | When implementation is complete and you need to integrate the work |
 | `compozy:spec-authoring` | When writing or reviewing technical specifications |
+| `compozy:team-agents` | When `--team` flag is passed or complex work benefits from collaborative agents |
 
 ## The Rule
 

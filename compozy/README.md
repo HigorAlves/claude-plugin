@@ -4,7 +4,7 @@ Full-lifecycle development orchestration for Claude Code. Design, plan, implemen
 
 ## Commands
 
-### `/compozy:orchestrate [PRD] [--auto]`
+### `/compozy:orchestrate [PRD] [--auto] [--team]`
 
 The main pipeline. Takes a product requirement and produces a pull request.
 
@@ -27,7 +27,7 @@ The main pipeline. Takes a product requirement and produces a pull request.
 | 6 | Integration & Review | **Always** | Two-stage review: spec compliance → code quality |
 | 7 | PR Generation | No | Verify tests, create branch, commit, push, open PR |
 
-*Skipped with `--auto` flag
+*Skipped with `--auto` flag. With `--team`, Phase 5 adds reviewer + architect agents per wave.
 
 ### `/compozy:design [topic]`
 
@@ -58,13 +58,14 @@ Review a GitHub PR — checks code quality, test coverage, and requirements alig
 /compozy:code-review --context "This adds pagination to the users endpoint"
 ```
 
-### `/compozy:debug [description]`
+### `/compozy:debug [description] [--team]`
 
 Systematic debugging — 4-phase root cause investigation before fixing.
 
 ```
 /compozy:debug "Tests in auth module failing after merge"
 /compozy:debug "Users seeing blank screen on login"
+/compozy:debug "Payment flow broken after deploy" --team
 ```
 
 ### `/compozy:finish [branch]`
@@ -142,6 +143,7 @@ Each step is independent. You can:
 | `pr-review` | Review methodology — comment tone, false positives, suggestion rules |
 | `branch-completion` | Finish branch workflow — verify, present options, execute |
 | `spec-authoring` | Spec writing conventions, templates, and examples |
+| `team-agents` | Collaborative agent teams — reviewer + architect for implementation, 3-agent investigation for debugging |
 
 ## SessionStart Hook
 
@@ -169,39 +171,135 @@ compozy/
 
 ## Common Workflows
 
-### New Feature
-```
-/compozy:design "feature description"    → explore & design spec
-/compozy:plan path/to/design-spec.md     → TDD implementation plan
-/compozy:orchestrate path/to/spec.md     → implement, review, PR
-```
+### New Feature (full pipeline)
 
-### Bug Ticket
-```
-/compozy:debug "bug description or #issue"   → 4-phase root cause investigation + TDD fix
-/compozy:finish                               → commit + PR
-```
-
-For simple bugs, `/compozy:debug` handles everything: investigation, failing test, fix, and verification. For complex multi-component bugs, add a code review step before finishing:
+The complete workflow for features with unclear or complex requirements. Each step produces an artifact the next step consumes.
 
 ```
-/compozy:debug "bug description"
-/compozy:code-review                     → self-review the fix
+/compozy:design "real-time notification system"
+```
+1. Explores the codebase for similar patterns
+2. Asks clarifying questions one at a time
+3. Proposes 2-3 approaches with trade-offs
+4. Produces a design spec at `compozy/<branch>/files/design-spec.md`
+
+```
+/compozy:plan compozy/feat-notifications/files/design-spec.md
+```
+5. Breaks the design into TDD-structured implementation tasks
+6. Organizes tasks into parallel-safe waves
+7. Produces an implementation plan
+
+```
+/compozy:orchestrate compozy/feat-notifications/files/tech-spec.md
+```
+8. Executes tasks wave-by-wave with TDD discipline
+9. Two-stage review (spec compliance → code quality)
+10. Creates branch, commits, pushes, opens PR
+
+**With `--team`:** Add reviewer + architect agents that check each wave's output before proceeding:
+```
+/compozy:orchestrate compozy/feat-notifications/files/tech-spec.md --team
+```
+
+### New Feature (fast track)
+
+When requirements are already clear — skip design and plan, go straight to implementation:
+
+```
+/compozy:orchestrate "Add pagination to the /users endpoint with cursor-based navigation" --auto
+```
+
+`--auto` skips approval gates (except spec review). Combine with `--team` for thorough implementation:
+```
+/compozy:orchestrate #42 --auto --team
+```
+
+### Bug Ticket (simple)
+
+For bugs where you have a clear reproduction or error message:
+
+```
+/compozy:debug "Login form accepts empty email — no validation error shown"
+```
+
+This runs the full 4-phase process:
+1. **Root cause investigation** — reproduce, read errors, trace data flow
+2. **Pattern analysis** — find working examples, compare
+3. **Hypothesis testing** — smallest change to test theory
+4. **TDD fix** — failing test → green → refactor
+
+Then finish the branch:
+```
 /compozy:finish
 ```
 
-### Quick Task (clear requirements)
+### Bug Ticket (complex / multi-component)
+
+For bugs that span multiple subsystems, use `--team` to dispatch 3 investigation agents simultaneously:
+
 ```
-/compozy:orchestrate "task description" --auto   → skip gates, straight to PR
+/compozy:debug "Payment flow broken after deploy — timeout in checkout but API logs show 200s" --team
 ```
 
-### Standalone Operations
+The team investigates in parallel:
+- **Data Flow Tracer** — traces the error backward through call chains
+- **Change Analyst** — examines recent deploys, git diffs, config changes
+- **Pattern Scout** — finds similar working flows, identifies what's different
+
+Their findings are synthesized into a single root cause hypothesis. Then:
 ```
-/compozy:code-review          → review any PR
-/compozy:debug "description"  → debug any issue
-/compozy:finish               → complete any branch
-/compozy:spec generate "..."  → generate a spec without building
+/compozy:code-review    → self-review the fix before finishing
+/compozy:finish         → commit + PR
 ```
+
+### Exploring Ideas (no implementation)
+
+When you want to brainstorm without committing to building anything:
+
+```
+/compozy:design "should we use WebSockets or SSE for real-time updates?"
+```
+
+Design produces a spec. You can stop there, or continue later:
+```
+/compozy:plan compozy/feat-realtime/files/design-spec.md    → when ready to plan
+/compozy:orchestrate compozy/feat-realtime/files/tech-spec.md  → when ready to build
+```
+
+### Code Review (standalone)
+
+Review any PR — works independently of the pipeline:
+
+```
+/compozy:code-review                                    → review current PR
+/compozy:code-review --jira PROJ-1234                   → check against Jira ticket
+/compozy:code-review --prd docs/feature-spec.md         → check against requirements doc
+/compozy:code-review --context "This adds rate limiting" → provide context for better review
+```
+
+### Spec Management (standalone)
+
+Generate, view, or edit specs without running the full pipeline:
+
+```
+/compozy:spec generate "Add dark mode support"   → generate a spec
+/compozy:spec view                                → view current spec
+/compozy:spec edit 5                              → edit section 5
+```
+
+### Choosing the Right Workflow
+
+| Situation | Workflow | Flags |
+|-----------|----------|-------|
+| Complex feature, unclear requirements | `design → plan → orchestrate` | |
+| Feature with clear requirements | `orchestrate` | `--auto` |
+| High-stakes feature, need extra review | `design → plan → orchestrate` | `--team` |
+| Simple bug, clear reproduction | `debug → finish` | |
+| Complex bug, multiple subsystems | `debug → code-review → finish` | `--team` |
+| Exploring ideas, no implementation | `design` | |
+| Review someone's PR | `code-review` | |
+| Finish work on current branch | `finish` | |
 
 ## Tips
 
@@ -210,4 +308,5 @@ For simple bugs, `/compozy:debug` handles everything: investigation, failing tes
 - **Review the spec carefully** in orchestrate — it's the single most important artifact
 - **Use `--auto` for well-defined tasks** — clear requirements speed things up
 - **Bug tickets don't need the full pipeline** — go straight to `/compozy:debug` → `/compozy:finish`
+- **Use `--team` for complex work** — adds reviewer/architect agents to orchestrate, 3-agent investigation to debug
 - **Add `compozy/` to `.gitignore`** if you don't want spec artifacts tracked

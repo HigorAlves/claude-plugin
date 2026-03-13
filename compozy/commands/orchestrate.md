@@ -65,6 +65,7 @@ Parse the user's input from `$ARGUMENTS`:
 
 **Flags**:
 - `--auto` → Reduce gates to only: spec approval (Phase 3) + final review (Phase 6). All other gates are skipped with best-guess defaults.
+- `--team` → Enable team mode for Phase 5. Instead of solo implementers, dispatches implementation teams with reviewer and architect agents. See `compozy:team-agents` skill for team compositions and flow.
 
 ---
 
@@ -324,7 +325,9 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    **Manifest**: $COMPOZY_DIR/task-manifest.md
    ```
 
-2. For each wave (sequential):
+2. **If `--team` flag is set:** Use the `compozy:team-agents` skill's Implementation Team pattern. For each wave, dispatch implementers in parallel, then a reviewer agent checks all outputs before proceeding. After all waves, an architect agent reviews the complete implementation for cross-wave coherence. Fix any issues found before Phase 6.
+
+3. **If solo mode (default):** For each wave (sequential):
 
    a. **Launch all tasks in the wave in parallel** using the Task tool:
       - `subagent_type`: `compozy:task-implementer`
@@ -373,7 +376,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
       **Tasks failed**: [N]
       ```
 
-3. After all waves complete, update checkpoint to phase 5 complete
+4. After all waves complete, update checkpoint to phase 5 complete
 
 ---
 

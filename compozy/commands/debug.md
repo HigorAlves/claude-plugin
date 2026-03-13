@@ -1,6 +1,6 @@
 ---
 description: Systematic debugging — find root cause before fixing, with structured investigation phases
-argument-hint: "[bug description, error message, or test failure]"
+argument-hint: "[bug description, error message, or test failure] [--team]"
 allowed-tools:
   - Read
   - Write
@@ -39,9 +39,22 @@ If you haven't completed Phase 1, you cannot propose fixes.
 - **Evidence before claims** — run commands, read output, then report
 - **One variable at a time** — never change multiple things at once
 
+## Flags
+
+- `--team` → Enable team debugging. Dispatches 3 investigation agents in parallel (Data Flow Tracer, Change Analyst, Pattern Scout), then synthesizes findings. See `compozy:team-agents` skill for the full Debugging Team pattern.
+
 ## Process
 
 ### Phase 1: Root Cause Investigation
+
+**If `--team` flag is set:** Use the `compozy:team-agents` skill's Debugging Team pattern. Dispatch 3 agents simultaneously:
+- **Data Flow Tracer** — traces the error backward through call chains
+- **Change Analyst** — examines git history for suspicious changes
+- **Pattern Scout** — finds similar working code and identifies differences
+
+Synthesize their findings, then present the consolidated root cause hypothesis to the user. Skip the manual investigation steps below and proceed to Phase 2.
+
+**If solo mode (default):**
 
 **BEFORE attempting ANY fix:**
 
