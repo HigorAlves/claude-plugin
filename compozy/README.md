@@ -59,6 +59,17 @@ Review a GitHub PR — checks code quality, test coverage, and requirements alig
 /compozy:code-review --context "This adds pagination to the users endpoint"
 ```
 
+### `/compozy:pr-respond [PR] [--auto] [--worktree] [--repo=name]`
+
+Address PR review feedback — reads all unresolved comments, categorizes them (actionable fix / question / nitpick / disagreement), fixes code, replies to every thread, and pushes changes.
+
+```
+/compozy:pr-respond
+/compozy:pr-respond 42
+/compozy:pr-respond https://github.com/org/repo/pull/42
+/compozy:pr-respond --auto --repo=Discover
+```
+
 ### `/compozy:debug [description] [--auto] [--team] [--worktree] [--repo=name] [--pr]`
 
 Systematic debugging — 4-phase root cause investigation before fixing.
@@ -104,7 +115,7 @@ Standalone spec management without the full pipeline.
 Compozy supports the full development lifecycle, with composable commands:
 
 ```
-design → plan → orchestrate → code-review → finish
+design → plan → orchestrate → code-review → pr-respond → finish
 ```
 
 Each step is independent. You can:
@@ -112,6 +123,7 @@ Each step is independent. You can:
 - `plan` without the full pipeline (prepare for manual implementation)
 - `orchestrate` from a PRD directly (skip design/plan if requirements are clear)
 - `code-review` any PR (standalone reviews)
+- `pr-respond` to address review feedback on your PR
 - `debug` any issue (standalone debugging)
 - `finish` any branch (standalone completion)
 
@@ -284,6 +296,20 @@ Review any PR — works independently of the pipeline:
 /compozy:code-review --context "This adds rate limiting" → provide context for better review
 ```
 
+### Addressing PR Review Feedback
+
+After your PR gets review comments:
+
+```
+/compozy:pr-respond
+```
+
+This reads all unresolved comments, categorizes them, fixes code, replies to each thread, and pushes. For full autopilot:
+```
+/compozy:pr-respond --auto
+/compozy:pr-respond 42 --auto --repo=Discover
+```
+
 ### Spec Management (standalone)
 
 Generate, view, or edit specs without running the full pipeline:
@@ -307,6 +333,7 @@ Generate, view, or edit specs without running the full pipeline:
 | Complex bug, fully autonomous with PR | `debug` | `--auto --team --pr` |
 | Exploring ideas, no implementation | `design` | |
 | Review someone's PR | `code-review` | |
+| Address review feedback on your PR | `pr-respond` | `--auto` |
 | Finish work on current branch | `finish` | |
 | Multiple tasks in parallel (separate terminals) | Any command | `--worktree` |
 | Fully autonomous, no interaction | Any command | `--auto` |

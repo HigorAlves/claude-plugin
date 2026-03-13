@@ -1,7 +1,7 @@
 {
   "name": "compozy",
-  "version": "2.1.3",
-  "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, and ship with engineering discipline. 8 commands, 13 agents, 10 skills. Flags: --auto (full autopilot), --team (collaborative agents), --worktree (parallel isolation), --repo (multi-repo support).",
+  "version": "2.2.0",
+  "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. 9 commands, 13 agents, 10 skills. Flags: --auto (full autopilot), --team (collaborative agents), --worktree (parallel isolation), --repo (multi-repo support).",
   "author": {
     "name": "Claude Helpers"
   }
