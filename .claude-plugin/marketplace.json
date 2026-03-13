@@ -4,57 +4,65 @@
     "name": "Higor Alves"
   },
   "metadata": {
-    "description": "A collection of productivity plugins for Claude Code - code review, PR management, feature development, and plugin creation tools",
-    "version": "1.1.0"
+    "description": "A collection of productivity plugins for Claude Code — development orchestration, code review, PR management, issue discovery, git workflows, output styles, and frontend design",
+    "version": "2.0.0"
   },
   "plugins": [
     {
-      "name": "code-review",
-      "source": "./code-review",
-      "description": "Automated code review for pull requests using multiple specialized agents with confidence-based scoring",
-      "version": "1.0.0",
-      "category": "code-quality",
-      "tags": ["review", "code-review", "pull-request", "quality"]
+      "name": "compozy",
+      "source": "./compozy",
+      "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, and ship with engineering discipline. 8 commands, 13 agents, 10 skills, team mode.",
+      "version": "2.0.0",
+      "category": "development",
+      "tags": ["orchestration", "spec", "prd", "workflow", "tasks", "tdd", "debugging"]
     },
     {
       "name": "pr-toolkit",
       "source": "./pr-toolkit",
       "description": "Comprehensive PR review agents specializing in comments, tests, error handling, type design, code quality, and code simplification",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "category": "code-quality",
       "tags": ["pr", "pull-request", "review", "tests", "types"]
-    },
-    {
-      "name": "feature-dev",
-      "source": "./feature-dev",
-      "description": "Comprehensive feature development workflow with specialized agents for codebase exploration, architecture design, and quality review",
-      "version": "1.0.0",
-      "category": "development",
-      "tags": ["feature", "development", "workflow", "architecture"]
     },
     {
       "name": "issue-finder",
       "source": "./issue-finder",
       "description": "Analyze codebases to discover bugs, security vulnerabilities, architectural problems, and improvements, then create GitHub issues",
-      "version": "1.1.0",
+      "version": "1.0.1",
       "category": "code-quality",
       "tags": ["issues", "bugs", "security", "audit", "github"]
     },
     {
-      "name": "plugin-dev",
-      "source": "./plugin-dev",
-      "description": "Comprehensive toolkit for developing Claude Code plugins with expert guidance on hooks, MCP, agents, commands, and skills",
-      "version": "1.0.0",
-      "category": "development",
-      "tags": ["plugin", "development", "hooks", "mcp", "agents"]
+      "name": "commit-commands",
+      "source": "./commit-commands",
+      "description": "Streamline your git workflow with simple commands for committing, pushing, and creating pull requests",
+      "version": "1.0.1",
+      "category": "git",
+      "tags": ["git", "commit", "push", "pull-request", "workflow"]
     },
     {
-      "name": "compozy",
-      "source": "./compozy",
-      "description": "Spec-driven development orchestration: PRD to PR with parallel task execution and quality gates",
-      "version": "1.0.2",
+      "name": "frontend-design",
+      "source": "./frontend-design",
+      "description": "Frontend design skill for UI/UX implementation",
+      "version": "1.0.1",
       "category": "development",
-      "tags": ["orchestration", "spec", "prd", "workflow", "tasks"]
+      "tags": ["frontend", "ui", "ux", "design", "css"]
+    },
+    {
+      "name": "explanatory-output-style",
+      "source": "./explanatory-output-style",
+      "description": "Adds educational insights about implementation choices and codebase patterns (mimics the deprecated Explanatory output style)",
+      "version": "1.0.1",
+      "category": "output-style",
+      "tags": ["output", "style", "educational", "explanations"]
+    },
+    {
+      "name": "learning-output-style",
+      "source": "./learning-output-style",
+      "description": "Interactive learning mode that requests meaningful code contributions at decision points (mimics the unshipped Learning output style)",
+      "version": "1.0.1",
+      "category": "output-style",
+      "tags": ["output", "style", "learning", "interactive"]
     }
   ]
 }
