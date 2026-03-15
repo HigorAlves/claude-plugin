@@ -34,6 +34,14 @@ Determine the input source:
 
 If a design spec exists at `compozy/<branch>/files/design-spec.md`, use it.
 
+**Create `$COMPOZY_DIR/compozy.json`** if it doesn't already exist (it may exist from a prior `/compozy:design` run):
+- `session_id`: generate a UUID (`uuidgen`)
+- `schema_version`: `"1.0.0"`, `command`: `"plan"`, `status`: `"in_progress"`
+- Standard structure: `repository`, `workspace`, `branch`, `input`, `flags`, `contributors`
+- `pipeline`: `{ current_phase: 0, total_phases: 2, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+
+**Register in central registry** `compozy/compozy.json` if not already registered for this `session_id`.
+
 ### Step 2: Scope Check
 
 If the spec covers multiple independent subsystems, suggest breaking into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
@@ -119,6 +127,10 @@ Save to `compozy/<branch>/files/implementation-plan.md`.
 
 Use the same branch directory as the design spec if one exists.
 
+**Update compozy.json**:
+- Detail file: Add `artifacts.implementation_plan` with `{ path: "implementation-plan.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "plan" }, summary: "<plan title>" }`. Update `updated_at`.
+- Central registry: Update `progress` to `"Plan created"`, `updated_at` to now.
+
 ### Step 7: Review Gate
 
 Present the plan for review using `AskUserQuestion`:
@@ -135,6 +147,10 @@ AskUserQuestion:
       description: "Feed this plan into /compozy:orchestrate"
   multiSelect: false
 ```
+
+**Update compozy.json**:
+- Detail file: Set `status` to `"complete"`, `pipeline.current_phase` to `2`. Update `updated_at`.
+- Central registry: Set `status` to `"complete"`, `progress` to `"Plan approved"`, `updated_at` to now.
 
 ## Remember
 

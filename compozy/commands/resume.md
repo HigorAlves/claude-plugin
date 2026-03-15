@@ -87,6 +87,7 @@ Pipeline artifacts are stored in `compozy/<branch-name>/files/` — see the orch
 Read all available `$COMPOZY_DIR/` artifacts to rebuild context:
 
 1. **Always read** (if they exist):
+   - `$COMPOZY_DIR/compozy.json` — structured metadata with session ID, pipeline state, artifacts, and contributors. If present, use it for richer context (exact timestamps, agent models used, artifact summaries). If absent (pre-compozy.json orchestration), proceed with checkpoint.md alone — this is backwards compatible.
    - `$COMPOZY_DIR/checkpoint.md` — current state
    - `$COMPOZY_DIR/tech-spec.md` — the approved spec
 
@@ -117,11 +118,17 @@ Read all available `$COMPOZY_DIR/` artifacts to rebuild context:
    **Last checkpoint**: Phase [N] — [Phase Name]
    **Resuming from**: Phase [N+1] — [Phase Name]
    **Branch**: [branch name from checkpoint]
+   **Session ID**: [from compozy.json, if available]
    **Working dir**: [resolved $COMPOZY_DIR path]
    **Spec**: [title from tech-spec.md]
    **Tasks**: [count] tasks across [count] waves
    **Progress**: [X]/[Y] tasks completed
    ```
+
+4. **Update compozy.json on resume** (if the file exists):
+   - Detail file (`$COMPOZY_DIR/compozy.json`): Update `status` to `"in_progress"` (if it was interrupted), update `updated_at` to now. As each phase completes during the resumed run, continue updating `pipeline.phases`, `artifacts`, and `contributors.agents` following the same patterns as the original command.
+   - Central registry (`compozy/compozy.json`): Update this orchestration's `status` to `"in_progress"`, `updated_at` to now. Continue updating `current_phase` and `progress` as phases complete.
+   - If compozy.json doesn't exist (old orchestration): proceed without it — backwards compatible. Optionally create it now using the checkpoint data to bootstrap the metadata.
 
 ## Step 3: Resume Execution
 

@@ -60,6 +60,22 @@ If you haven't completed Phase 1, you cannot propose fixes.
    - Use the `compozy:worktrees` skill to create an isolated worktree
    - All subsequent phases run inside the worktree
 
+3. **Create `$COMPOZY_DIR`** — `compozy/<sanitized-branch-name>/files/`
+
+4. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
+    - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `schema_version`: `"1.0.0"`, `command`: `"debug"`, `status`: `"in_progress"`
+    - `created_at` / `updated_at`: current ISO-8601 timestamp
+    - `repository`: from `git remote get-url origin`, `git rev-parse --show-toplevel`, default branch
+    - `workspace`, `branch`, `input`, `flags`: same structure as orchestrate
+    - `pipeline`: `{ current_phase: 0, total_phases: 5, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+    - `artifacts`: `{ checkpoint: { path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "debug" }, summary: "Phase 0 — Setup complete" } }`
+    - `contributors.human`: from git config, `contributors.agents`: `[]`
+
+5. **Register in central registry** `compozy/compozy.json`:
+    - If the file doesn't exist: create it with `schema_version`, `repository` block, and empty `orchestrations` array
+    - Append entry with: `session_id`, `command: "debug"`, `status`, `branch`, `input`, `workspace`, `current_phase: 0`, `total_phases: 5`, `progress: "Setup complete"`, timestamps, `detail_path`
+
 ### Phase 1: Root Cause Investigation
 
 **If `--team` flag is set:** Use the `compozy:team-agents` skill's Debugging Team pattern. Dispatch 3 agents simultaneously:
@@ -155,6 +171,10 @@ AskUserQuestion:
 ```
 If `--auto`: proceed to fix immediately.
 
+**Update compozy.json** (if `$COMPOZY_DIR` exists):
+- Detail file: Set `pipeline.current_phase` to `1`. Add Phase 1 to `pipeline.phases` with `{ number: 1, name: "Root Cause Investigation", status: "complete", started_at, completed_at }`. Update `updated_at`.
+- Central registry: Update `current_phase` to `1`, `progress` to `"Root cause investigation complete"`, `updated_at` to now.
+
 ### Phase 2: Pattern Analysis
 
 1. **Find working examples** — similar working code in the same codebase
@@ -188,6 +208,10 @@ AskUserQuestion:
 ```
 If `--auto`: question architecture automatically, then retry.
 
+**Update compozy.json** (if `$COMPOZY_DIR` exists):
+- Detail file: Set `pipeline.current_phase` to `3`. Add phases 2-3 to `pipeline.phases`. Update `updated_at`.
+- Central registry: Update `current_phase` to `3`, `progress` to `"Hypothesis validated"`, `updated_at` to now.
+
 ### Phase 4: Implementation
 
 1. **Write failing test** reproducing the bug (use `compozy:tdd` discipline)
@@ -213,6 +237,10 @@ AskUserQuestion:
 ```
 If `--auto`: commit the fix automatically.
 
+**Update compozy.json** (if `$COMPOZY_DIR` exists):
+- Detail file: Set `pipeline.current_phase` to `4`. Add Phase 4 to `pipeline.phases` with `{ number: 4, name: "Implementation", status: "complete", started_at, completed_at }`. Update `updated_at`.
+- Central registry: Update `current_phase` to `4`, `progress` to `"Fix implemented"`, `updated_at` to now.
+
 ### Phase 5: PR Creation (if `--pr`)
 
 If `--pr` flag is set, after the fix is committed:
@@ -235,6 +263,11 @@ If `--pr` flag is set, after the fix is committed:
    )"
    ```
 5. **Report PR URL**
+
+**Update compozy.json** (if `$COMPOZY_DIR` exists):
+- Detail file: Set `pipeline.current_phase` to `5`. Set `status` to `"complete"`. Add Phase 5 to `pipeline.phases` with `{ number: 5, name: "PR Creation", status: "complete", started_at, completed_at }`. Update `updated_at`.
+- Central registry: Set `status` to `"complete"`, `current_phase` to `5`, `progress` to `"PR created"`, `updated_at` to now.
+
 6. **Cleanup worktree** (if `--worktree` was used): `git worktree remove <path>`
 
 If `--auto` + `--pr`: the entire flow runs without stopping — debug → fix → commit → push → PR.

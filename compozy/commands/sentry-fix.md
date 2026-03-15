@@ -95,6 +95,28 @@ Parse the user's input from `$ARGUMENTS`:
    ```
    Write to `$COMPOZY_DIR/checkpoint.md`.
 
+6. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
+    - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `schema_version`: `"1.0.0"`
+    - `command`: `"sentry-fix"`
+    - `status`: `"in_progress"`
+    - `created_at` / `updated_at`: current ISO-8601 timestamp
+    - `repository`: from `git remote get-url origin`, `git rev-parse --show-toplevel`, `basename` of toplevel, default branch from `git symbolic-ref refs/remotes/origin/HEAD`
+    - `workspace.type`: `"worktree"` if `--worktree`, otherwise `"main"`
+    - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
+    - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
+    - `input`: `{ type: "sentry_issue", source: "<issue-id-or-query>", title: "<issue-title>" }`
+    - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `pipeline`: `{ current_phase: 0, total_phases: 6, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+    - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "sentry-fix" }, summary: "Phase 0 — Setup complete" }`
+    - `sentry`: `{ issue_id: "<id>", short_id: "<PROJECT-ABC>", url: "<sentry-url>" }` — populated from parsed input (fill in what's available, leave null for unknown fields)
+    - `contributors.human`: from `git config user.name`, `git config user.email`, and `gh api /user --jq .login` (if available)
+    - `contributors.agents`: `[]`
+
+7. **Register in central registry** `compozy/compozy.json`:
+    - If the file doesn't exist: create it with `schema_version: "1.0.0"`, `repository` block (same git info as above), and empty `orchestrations` array
+    - Append a new entry to `orchestrations` with: `session_id`, `command: "sentry-fix"`, `status: "in_progress"`, `branch`, `input` (`{ type: "sentry_issue", source, title }`), `workspace` (`{ type, path }` — path relative to repo root), `current_phase: 0`, `total_phases: 6`, `progress: "Setup complete"`, `created_at`, `updated_at`, and `detail_path` pointing to `$COMPOZY_DIR/compozy.json` (relative to repo root)
+
 ---
 
 ### Phase 1: Issue Discovery `[GATE unless --auto]`
@@ -162,6 +184,10 @@ Parse the user's input from `$ARGUMENTS`:
    **Users affected**: [count]
    ```
 
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `1`. Add Phase 1 to `pipeline.phases` with `{ number: 1, name: "Issue Discovery", status: "complete", started_at, completed_at }`. Update `sentry` block with resolved `issue_id`, `short_id`, and `url`. Update `input.title` with actual issue title. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's entry (match by `session_id`) — set `current_phase` to `1`, `progress` to `"Issue discovered"`, `updated_at` to now.
+
 ---
 
 ### Phase 2: Deep Sentry Analysis
@@ -201,6 +227,10 @@ Synthesize their findings, then proceed to Phase 3. Skip the solo analysis steps
    **Environments affected**: [list]
    **Releases affected**: [list]
    ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `2`. Add Phase 2 to `pipeline.phases` with `{ number: 2, name: "Deep Sentry Analysis", status: "complete", started_at, completed_at, agent: "sentry-analyzer", model: "opus" }`. Add `artifacts.sentry_analysis` with `{ path: "sentry-analysis.md", created_at, updated_at, size_bytes, created_by: { type: "agent", name: "sentry-analyzer", model: "opus" }, summary: "<analysis summary>" }`. Add `sentry-analyzer` to `contributors.agents` with `{ name: "sentry-analyzer", model: "opus", phases: [2] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `2`, `progress` to `"Sentry analysis complete"`, `updated_at` to now.
 
 ---
 
@@ -280,6 +310,10 @@ Apply the `compozy:systematic-debugging` methodology:
    **Fix approach**: [1-line summary]
    ```
 
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `3`. Add Phase 3 to `pipeline.phases` with `{ number: 3, name: "Root Cause Investigation", status: "complete", started_at, completed_at }`. Add `artifacts.root_cause` with `{ path: "root-cause.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "sentry-fix" }, summary: "<root cause 1-line>" }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `3`, `progress` to `"Root cause identified"`, `updated_at` to now.
+
 ---
 
 ### Phase 4: Implementation `[GATE unless --auto]`
@@ -331,6 +365,10 @@ Apply the `compozy:tdd` skill:
    **Test suite**: [pass/fail count]
    ```
 
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `4`. Add Phase 4 to `pipeline.phases` with `{ number: 4, name: "Implementation", status: "complete", started_at, completed_at }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `4`, `progress` to `"Fix implemented"`, `updated_at` to now.
+
 ---
 
 ### Phase 5: Verification Audit
@@ -356,6 +394,10 @@ Apply the `compozy:verification` skill:
    **Environments covered**: [list]
    **Diff size**: [files changed, insertions, deletions]
    ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `5`. Add Phase 5 to `pipeline.phases` with `{ number: 5, name: "Verification", status: "complete", started_at, completed_at }`. Add `artifacts.verification` with `{ path: "verification.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "sentry-fix" }, summary: "<verification summary>" }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `5`, `progress` to `"Verification complete"`, `updated_at` to now.
 
 ---
 
@@ -430,6 +472,10 @@ Apply the `compozy:verification` skill:
    **PR**: [number and URL, if created]
    **Branch**: [branch-name]
    ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `6`. Set `status` to `"complete"`. Add Phase 6 to `pipeline.phases` with `{ number: 6, name: "PR & Resolution", status: "complete", started_at, completed_at }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Set `status` to `"complete"`, `current_phase` to `6`, `progress` to `"PR created, Sentry resolved"`, `updated_at` to now.
 
 ---
 

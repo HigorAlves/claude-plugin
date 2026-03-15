@@ -103,6 +103,27 @@ Parse the user's input from `$ARGUMENTS`:
 
 Write to `$COMPOZY_DIR/checkpoint.md`.
 
+10. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
+    - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `schema_version`: `"1.0.0"`
+    - `command`: `"orchestrate"`
+    - `status`: `"in_progress"`
+    - `created_at` / `updated_at`: current ISO-8601 timestamp
+    - `repository`: from `git remote get-url origin`, `git rev-parse --show-toplevel`, `basename` of toplevel, default branch from `git symbolic-ref refs/remotes/origin/HEAD`
+    - `workspace.type`: `"worktree"` if `--worktree`, otherwise `"main"`
+    - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
+    - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
+    - `input`: `{ type, source, resolved_url (if applicable), title }`
+    - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+    - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "orchestrate" }, summary: "Phase 0 — Setup complete" }`
+    - `contributors.human`: from `git config user.name`, `git config user.email`, and `gh api /user --jq .login` (if gh available)
+    - `contributors.agents`: `[]`
+
+11. **Register in central registry** `compozy/compozy.json`:
+    - If the file doesn't exist: create it with `schema_version: "1.0.0"`, `repository` block (same git info as above), and empty `orchestrations` array
+    - Append a new entry to `orchestrations` with: `session_id`, `command: "orchestrate"`, `status: "in_progress"`, `branch` (the full `$BRANCH_NAME`), `input` (`{ type, source, title }`), `workspace` (`{ type, path }` — path is relative to repo root), `current_phase: 0`, `total_phases: 7`, `progress: "Setup complete"`, `created_at`, `updated_at`, and `detail_path` pointing to `$COMPOZY_DIR/compozy.json` (relative to repo root)
+
 ---
 
 ## Phase 1: PRD Analysis `[GATE unless --auto]`
@@ -148,6 +169,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Requirements**: [count] FR, [count] NFR
 **Questions answered**: [count]
 ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `1`. Add Phase 1 to `pipeline.phases` with `{ number: 1, name: "PRD Analysis", status: "complete", started_at, completed_at, agent: "prd-analyzer", model: "opus" }`. Add `prd-analyzer` to `contributors.agents` with `{ name: "prd-analyzer", model: "opus", phases: [1] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's entry (match by `session_id`) — set `current_phase` to `1`, `progress` to `"PRD analyzed"`, `updated_at` to now.
 
 ---
 
@@ -196,6 +221,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Key files identified**: [count]
 **Patterns documented**: [list]
 ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `2`. Add Phase 2 to `pipeline.phases` with `{ number: 2, name: "Codebase Discovery", status: "complete", started_at, completed_at }`. Add `artifacts.codebase_context` with `{ path: "codebase-context.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "orchestrate" }, summary: "<architecture summary>" }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `2`, `progress` to `"Codebase analyzed"`, `updated_at` to now.
 
 ---
 
@@ -267,6 +296,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Files planned**: [count]
 ```
 
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `3`. Add Phase 3 to `pipeline.phases` with `{ number: 3, name: "Tech Spec", status: "complete", started_at, completed_at, agent: "spec-generator", model: "opus" }`. Add `artifacts.tech_spec` with `{ path: "tech-spec.md", created_at, updated_at, size_bytes, created_by: { type: "agent", name: "spec-generator", model: "opus" }, summary: "<spec summary>" }`. Add `spec-generator` to `contributors.agents` with `{ name: "spec-generator", model: "opus", phases: [3] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `3`, `progress` to `"Spec approved"`, `updated_at` to now.
+
 ---
 
 ## Phase 4: Task Decomposition `[GATE unless --auto]`
@@ -325,6 +358,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Waves**: [count]
 **Max parallelism**: [count]
 ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `4`. Add Phase 4 to `pipeline.phases` with `{ number: 4, name: "Task Decomposition", status: "complete", started_at, completed_at, agent: "task-decomposer", model: "sonnet" }`. Add `artifacts.task_manifest` with `{ path: "task-manifest.md", created_at, updated_at, size_bytes, created_by: { type: "agent", name: "task-decomposer", model: "sonnet" }, summary: "[N] tasks across [N] waves" }`. Add `task-decomposer` to `contributors.agents` with `{ name: "task-decomposer", model: "sonnet", phases: [4] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `4`, `progress` to `"[N] tasks across [N] waves"`, `updated_at` to now.
 
 ---
 
@@ -399,7 +436,11 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
       **Tasks failed**: [N]
       ```
 
-4. After all waves complete, update checkpoint to phase 5 complete
+      **Update compozy.json** (per wave):
+      - Detail file: Update Phase 5 in `pipeline.phases` with `{ number: 5, name: "Execution", status: "in_progress", started_at, progress: { current_wave, total_waves, tasks_completed, tasks_total, tasks_failed } }`. Add/update `artifacts.progress` with `{ path: "progress.md", created_at, updated_at, size_bytes, created_by: { type: "agent", name: "task-implementer", model: "sonnet" }, summary: "Wave [N] of [M] complete" }`. Update `updated_at`.
+      - Central registry: Update this orchestration's `current_phase` to `5`, `progress` to `"[N]/[M] tasks (Wave [X] of [Y])"`, `updated_at` to now.
+
+4. After all waves complete, update checkpoint to phase 5 complete. **Update compozy.json**: Mark Phase 5 as `"complete"` in `pipeline.phases` with `completed_at`. Add `task-implementer` to `contributors.agents` with `{ name: "task-implementer", model: "sonnet", phases: [5], instances: <parallel-count> }`. Update registry `progress` to `"Execution complete"`.
 
 ---
 
@@ -479,6 +520,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **Issues fixed**: [N]
 **User decision**: [fix all / fix critical / proceed]
 ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `6`. Add Phase 6 to `pipeline.phases` with `{ number: 6, name: "Review", status: "complete", started_at, completed_at }`. Add review agents to `contributors.agents`: `integration-validator` (sonnet, phase 6), `spec-compliance-reviewer` (sonnet, phase 6), `code-quality-reviewer` (sonnet, phase 6). Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `6`, `progress` to `"Review complete"`, `updated_at` to now.
 
 ---
 
@@ -560,6 +605,10 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 **URL**: [url]
 **Pipeline duration**: [time]
 ```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `7`. Set `status` to `"complete"`. Add Phase 7 to `pipeline.phases` with `{ number: 7, name: "PR Generation", status: "complete", started_at, completed_at }`. Add `pr-assembler` to `contributors.agents` with `{ name: "pr-assembler", model: "sonnet", phases: [7] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Set `status` to `"complete"`, `current_phase` to `7`, `progress` to `"PR #[number] created"`, `updated_at` to now.
 
 ---
 

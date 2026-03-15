@@ -56,6 +56,14 @@ Parse `$ARGUMENTS` for a subcommand:
    - Sanitize for directory use (replace `/` with `-`)
    - Create `compozy/<sanitized-branch-name>/files/` (`$COMPOZY_DIR`)
 
+   **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
+    - `session_id`: generate a UUID (`uuidgen`)
+    - `schema_version`: `"1.0.0"`, `command`: `"spec"`, `status`: `"in_progress"`
+    - Standard structure: `repository`, `workspace`, `branch`, `input`, `flags`, `contributors`
+    - `pipeline`: `{ current_phase: 0, total_phases: 3, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+
+   **Register in central registry** `compozy/compozy.json` — same pattern as other commands
+
 3. **PRD Analysis**: Launch `prd-analyzer` agent (opus):
    - `subagent_type`: `compozy:prd-analyzer`
    - `model`: `opus`
@@ -88,6 +96,10 @@ Parse `$ARGUMENTS` for a subcommand:
      multiSelect: false
    ```
    - Iterate until approved
+
+   **Update compozy.json**:
+   - Detail file: Set `status` to `"complete"`, `pipeline.current_phase` to `3`. Add `artifacts.tech_spec` with `{ path: "tech-spec.md", created_at, updated_at, size_bytes, created_by: { type: "agent", name: "spec-generator", model: "opus" }, summary: "<spec title>" }`. Add `artifacts.codebase_context` if created. Add `spec-generator` and `prd-analyzer` to `contributors.agents`. Update `updated_at`.
+   - Central registry: Set `status` to `"complete"`, `progress` to `"Spec generated"`, `updated_at` to now.
 
 7. Report:
    ```
