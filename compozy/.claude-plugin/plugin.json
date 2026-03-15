@@ -1,8 +1,10 @@
 {
   "name": "compozy",
-  "version": "2.2.1",
-  "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. 9 commands, 13 agents, 10 skills. Flags: --auto (full autopilot), --team (collaborative agents), --worktree (parallel isolation), --repo (multi-repo support).",
+  "version": "2.5.0",
+  "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. Jira ticket-driven and Sentry error-driven workflows. 12 commands, 15 agents, 10 skills. Flags: --auto (full autopilot), --team (collaborative agents), --worktree (parallel isolation), --repo (multi-repo support).",
   "author": {
     "name": "Claude Helpers"
-  }
+  },
+  "repository": "https://github.com/higoralves/claude-helpers",
+  "license": "MIT"
 }

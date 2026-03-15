@@ -1,4 +1,5 @@
 ---
+name: improvement-finder
 description: Find performance issues, tech debt, and improvement opportunities
 model: sonnet
 color: green
@@ -6,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Improvement Finder Agent

@@ -9,6 +9,7 @@ tools:
   - Grep
   - WebFetch
   - "Bash(gh issue view:*)"
+maxTurns: 20
 ---
 
 # PRD Analyzer Agent

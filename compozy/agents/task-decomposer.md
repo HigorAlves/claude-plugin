@@ -7,6 +7,7 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 20
 ---
 
 # Task Decomposer Agent

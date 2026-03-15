@@ -1,4 +1,5 @@
 ---
+name: security-scanner
 description: Find security vulnerabilities and risks in code
 model: opus
 color: red
@@ -6,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Security Scanner Agent

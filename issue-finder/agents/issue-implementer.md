@@ -1,4 +1,5 @@
 ---
+name: issue-implementer
 description: Implements fixes following a pre-defined plan
 model: sonnet
 color: green
@@ -11,6 +12,7 @@ tools:
   - "Bash(npm *:*)"
   - "Bash(yarn *:*)"
   - "Bash(pnpm *:*)"
+maxTurns: 40
 ---
 
 # Issue Implementer Agent

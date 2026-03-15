@@ -1,7 +1,7 @@
 ---
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(cat:*), mcp__plugin_github_github__pull_request_review_write, mcp__plugin_github_github__add_comment_to_pending_review, mcp__jira_*, Read
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(cat:*), mcp__plugin_github_github__pull_request_review_write, mcp__plugin_github_github__add_comment_to_pending_review, mcp__jira_*, Read, Task
 description: Review a GitHub PR — checks code quality, test coverage, and requirements alignment
-args: "[--jira <ticket-id-or-url>] [--prd <file-path>] [--context <description>]"
+argument-hint: "[--jira <ticket-id-or-url>] [--prd <file-path>] [--context <description>]"
 ---
 
 Provide a thorough, human-quality code review for the given pull request.

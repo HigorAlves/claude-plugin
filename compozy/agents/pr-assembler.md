@@ -10,6 +10,13 @@ tools:
   - "Bash(git *)"
   - "Bash(gh pr create:*)"
   - "Bash(gh pr view:*)"
+maxTurns: 20
+disallowedTools:
+  - "Bash(git reset --hard*)"
+  - "Bash(git clean -f*)"
+  - "Bash(git push --force*)"
+  - "Bash(git push -f*)"
+  - "Bash(rm -rf*)"
 ---
 
 # PR Assembler Agent

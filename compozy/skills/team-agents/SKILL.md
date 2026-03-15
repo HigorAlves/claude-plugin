@@ -54,173 +54,18 @@ digraph when_to_use {
 
 ## Team Compositions
 
-### Spec Review Team (orchestrate --team, Phase 3)
+Select the appropriate team based on context, then read its reference file for detailed roles and flow:
 
-Used during Phase 3 (Tech Spec Generation). After the spec-generator produces the spec, two reviewers validate it before the user sees it.
-
-**Roles:**
-1. **Spec Critic** — Reviews for gaps, weaknesses, and over-engineering
-2. **Testability Reviewer** — Ensures every requirement is verifiable
-
-**Flow:**
-```
-Phase 3 (after spec generation):
-  1. Dispatch both reviewers in parallel with the generated spec + codebase context
-  2. Spec Critic: "Review this tech spec for:
-      - Missing edge cases or error scenarios
-      - Unclear or ambiguous interfaces
-      - Over-engineering (YAGNI violations)
-      - Inconsistencies with existing codebase patterns
-      - Missing non-functional requirements (performance, security)
-      Report issues by severity."
-  3. Testability Reviewer: "Review this tech spec for:
-      - Acceptance criteria that can't be tested (vague, subjective)
-      - Interfaces that can't be mocked or stubbed
-      - Missing test scenarios for each component
-      - Dependencies that make testing hard
-      Report untestable items and suggest how to make them testable."
-  4. Synthesize findings
-  5. If critical issues: re-run spec-generator with feedback, then re-review
-  6. If clean: present spec to user for approval
-```
-
-**Why this helps:**
-- Catches spec gaps BEFORE implementation (10x cheaper than fixing code)
-- Testability review prevents "we can't test this" surprises in Phase 5
-- Two perspectives: one on design quality, one on verifiability
-
-### Decomposition Review Team (orchestrate --team, Phase 4)
-
-Used during Phase 4 (Task Decomposition). After the task-decomposer produces the manifest, two reviewers validate it before execution.
-
-**Roles:**
-1. **Dependency Auditor** — Validates task ordering and isolation
-2. **Complexity Estimator** — Flags tasks that need splitting or special attention
-
-**Flow:**
-```
-Phase 4 (after task decomposition):
-  1. Dispatch both reviewers in parallel with the manifest + tech spec
-  2. Dependency Auditor: "Review this task manifest for:
-      - Hidden dependencies between tasks in the same wave
-      - File exclusivity violations (two tasks touching the same file)
-      - Incorrect wave ordering (task depends on something not yet built)
-      - Missing interface contracts between waves
-      Report ordering issues and file conflicts."
-  3. Complexity Estimator: "Review this task manifest for:
-      - Tasks that are too large (should be split into subtasks)
-      - High-risk tasks that need opus model instead of sonnet
-      - Acceptance criteria that are too vague to implement
-      - Tasks with unclear scope boundaries
-      Flag tasks and suggest adjustments."
-  4. Synthesize findings
-  5. If wave ordering or file exclusivity is wrong: re-run task-decomposer with feedback
-  6. If clean: present manifest to user for approval
-```
-
-**Why this helps:**
-- Prevents parallel execution conflicts (file exclusivity violations = broken builds)
-- Catches tasks too large for a single agent (avoids BLOCKED status in Phase 5)
-- Validates wave ordering before spending time on execution
-
-### Implementation Team (orchestrate --team, Phase 5)
-
-Used during Phase 5 (Task Execution). Each wave dispatches a team instead of solo implementers.
-
-**Roles:**
-1. **Implementer** — Writes the code following TDD discipline
-2. **Reviewer** — Reviews each implementer's output before the wave completes
-3. **Architect** — Monitors cross-cutting concerns across waves (shared types, API consistency, naming)
-
-**Flow:**
-```
-Wave N:
-  1. Dispatch implementer agents (parallel, one per task — same as solo mode)
-  2. Collect results
-  3. Dispatch reviewer agent with ALL wave outputs:
-     "Review these implementations for:
-      - Correctness against spec
-      - Cross-task consistency (naming, patterns, interfaces)
-      - Test quality (real behavior tested, not mocks)
-      - Edge cases missed
-      Report issues by severity."
-  4. If critical issues: re-dispatch implementers with review feedback
-  5. If clean: proceed to next wave
-
-After all waves:
-  6. Dispatch architect agent with full implementation:
-     "Review the complete implementation for:
-      - Architectural coherence across all waves
-      - Interface consistency between components
-      - Missing integration points
-      - Patterns that diverged from codebase conventions
-      Report structural issues."
-  7. Fix any architectural issues before Phase 6
-```
-
-**Why this helps:**
-- Reviewer catches bugs implementers miss (fresh eyes on each wave)
-- Architect catches cross-wave drift (naming divergence, inconsistent patterns)
-- Issues caught per-wave, not at the end (cheaper to fix early)
-
-### Debugging Team (debug --team)
-
-Used during Phase 1 (Root Cause Investigation). Multiple agents investigate simultaneously from different angles.
-
-**Roles:**
-1. **Data Flow Tracer** — Traces the bug backward through call chains (root-cause-tracing technique)
-2. **Change Analyst** — Examines recent git changes, diffs, and commit history for likely culprits
-3. **Pattern Scout** — Finds similar working code in the codebase and identifies what's different
-
-**Flow:**
-```
-Phase 1 (parallel investigation):
-  1. Dispatch all 3 agents simultaneously with the bug description
-  2. Data Flow Tracer: "Trace the error backward through the call chain.
-     Where does the bad value originate? Follow it up to the source.
-     Return: the trace chain and suspected root cause."
-  3. Change Analyst: "Check git log, git diff, recent commits.
-     What changed that could cause this? Check dependencies, config.
-     Return: list of suspicious changes with file paths and reasoning."
-  4. Pattern Scout: "Find similar working code in this codebase.
-     What's different between working and broken? Compare patterns.
-     Return: differences found and what the working version does right."
-
-Phase 1 (synthesis):
-  5. Read all 3 reports
-  6. Synthesize findings — where do the investigations converge?
-  7. Present consolidated root cause hypothesis to user
-  8. Proceed to Phase 2-4 as normal
-```
-
-**Why this helps:**
-- Three perspectives on the same bug surface different evidence
-- Convergence = high confidence (if all 3 point to same cause, it's likely right)
-- Divergence = the bug is more complex than it appears (investigate further)
-
-### Design Team (design --team)
-
-Used during approach exploration. Multiple agents propose designs independently.
-
-**Roles:**
-1. **Approach Explorer A** — Designs solution favoring simplicity and minimal changes
-2. **Approach Explorer B** — Designs solution favoring extensibility and future-proofing
-3. **Devil's Advocate** — Reviews both approaches for weaknesses, edge cases, and overlooked requirements
-
-**Flow:**
-```
-  1. After clarifying questions are answered:
-     Dispatch Explorer A and Explorer B with same context
-  2. Collect both approaches
-  3. Dispatch Devil's Advocate with both approaches:
-     "Review both designs. For each:
-      - What breaks under load/scale?
-      - What edge cases are missed?
-      - What's the maintenance burden in 6 months?
-      - Which is easier to test?
-      Report strengths and weaknesses of each."
-  4. Present all findings to user with recommendation
-```
+| Team | When | Reference |
+|------|------|-----------|
+| **Spec Review** | `orchestrate --team`, Phase 3 | See [spec-review-team](${CLAUDE_SKILL_DIR}/references/spec-review-team.md) |
+| **Decomposition Review** | `orchestrate --team`, Phase 4 | See [decomposition-review-team](${CLAUDE_SKILL_DIR}/references/decomposition-review-team.md) |
+| **Implementation** | `orchestrate --team`, Phase 5 | See [implementation-team](${CLAUDE_SKILL_DIR}/references/implementation-team.md) |
+| **Debugging** | `debug --team` | See [debugging-team](${CLAUDE_SKILL_DIR}/references/debugging-team.md) |
+| **Sentry Investigation** | `sentry-fix --team` | See [sentry-team](${CLAUDE_SKILL_DIR}/references/sentry-team.md) |
+| **Jira Bug Investigation** | `jira --team`, `$FLOW = bug` | See [jira-bug-team](${CLAUDE_SKILL_DIR}/references/jira-bug-team.md) |
+| **Jira Story Planning** | `jira --team`, `$FLOW = story` | See [jira-story-team](${CLAUDE_SKILL_DIR}/references/jira-story-team.md) |
+| **Design** | `design --team` | See [design-team](${CLAUDE_SKILL_DIR}/references/design-team.md) |
 
 ## Dispatch Pattern
 

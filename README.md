@@ -117,6 +117,23 @@ Comprehensive toolkit for developing Claude Code plugins with expert guidance on
 - GitHub CLI (`gh`) authenticated with repo access
 - Git repository with remote configured
 
+### MCP Server Dependencies
+
+Some plugins require MCP servers to be installed and configured. Install the ones needed by the plugins you use.
+
+| MCP Server | Required By | Purpose | Install |
+|------------|------------|---------|---------|
+| **GitHub** (`github@claude-plugins-official`) | compozy, issue-finder | PR creation, issue management, code review | `/mcp add github` |
+| **Sentry** (`sentry@claude-plugins-official`) | compozy | Production error monitoring — fetch issues, stack traces, breadcrumbs, resolve issues | `/mcp add sentry` |
+| **Jira** | compozy | Jira ticket-driven development (jira command), code review context (code-review --jira flag) | Configure per your Jira instance |
+
+**Which plugins need what:**
+
+- **compozy** — GitHub (orchestrate, resume, pr-respond, code-review), Sentry (sentry-fix), Jira (jira, code-review `--jira` flag)
+- **issue-finder** — GitHub (fix-issue)
+- **pr-toolkit** — None
+- **commit-commands** — None
+
 ## Contributing
 
 Each plugin is in its own directory with:

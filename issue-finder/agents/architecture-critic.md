@@ -1,4 +1,5 @@
 ---
+name: architecture-critic
 description: Find architectural problems and structural issues in code
 model: sonnet
 color: yellow
@@ -6,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Architecture Critic Agent

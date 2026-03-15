@@ -1,4 +1,5 @@
 ---
+name: issue-planner
 description: Plans fixes for GitHub issues by analyzing the issue and codebase, then creating implementation plans
 model: opus
 color: blue
@@ -8,6 +9,8 @@ tools:
   - Grep
   - "Bash(git blame:*)"
   - "Bash(git log:*)"
+maxTurns: 20
+permissionMode: plan
 ---
 
 # Issue Planner Agent

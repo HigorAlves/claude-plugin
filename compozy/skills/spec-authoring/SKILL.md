@@ -1,7 +1,6 @@
 ---
-name: Spec Authoring
-description: This skill should be used when generating technical specifications from product requirements, writing tech specs, creating task manifests for parallel execution, decomposing features into implementation tasks, structuring PRD analysis, authoring architecture documents, or when the user asks to "write a spec", "create a tech spec", "generate a specification", "break down a feature", "decompose into tasks", or needs guidance on spec structure, task wave planning, file ownership maps, or acceptance criteria formatting.
-version: 1.0.0
+name: spec-authoring
+description: Use when writing tech specs, creating task manifests, decomposing features into tasks, or authoring architecture documents from requirements
 ---
 
 # Spec Authoring for Development Orchestration

@@ -4,6 +4,8 @@ description: Reviews PR changes for compliance with project guidelines (CLAUDE.m
 tools: Glob, Grep, Read, Bash(gh pr diff:*), Bash(gh pr view:*)
 model: sonnet
 color: blue
+maxTurns: 15
+permissionMode: plan
 ---
 
 You are a senior engineer reviewing code changes for compliance with the team's project guidelines.

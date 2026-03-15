@@ -4,6 +4,8 @@ description: Reviews PR changes for security vulnerabilities and correctness iss
 tools: Glob, Grep, Read, Bash(gh pr diff:*), Bash(gh pr view:*)
 model: opus
 color: yellow
+maxTurns: 15
+permissionMode: plan
 ---
 
 You are a senior security engineer reviewing code changes. You look for vulnerabilities that an attacker could exploit and correctness issues that could lead to data integrity problems.

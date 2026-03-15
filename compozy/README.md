@@ -82,6 +82,60 @@ Systematic debugging — 4-phase root cause investigation before fixing.
 /compozy:debug "Login broken" --auto --pr --repo=Discover --worktree
 ```
 
+### `/compozy:sentry-fix [issue] [--auto] [--team] [--worktree] [--repo=name] [--pr]`
+
+Fix production errors from Sentry — discover, analyze, find root cause, fix with TDD, verify, and resolve.
+
+**Input sources:**
+- Sentry issue URL: `/compozy:sentry-fix https://sentry.io/organizations/org/issues/12345/`
+- Issue ID: `/compozy:sentry-fix 12345`
+- Short ID: `/compozy:sentry-fix PROJECT-ABC`
+- Search: `/compozy:sentry-fix "TypeError in checkout flow"`
+- Interactive: `/compozy:sentry-fix` (prompts for input)
+
+**Pipeline phases:**
+
+| Phase | Name | Gate | Description |
+|-------|------|------|-------------|
+| 0 | Setup | - | Repo selection, worktree creation, directory setup |
+| 1 | Issue Discovery | Yes* | Parse input, fetch via Sentry MCP, confirm issue |
+| 2 | Deep Sentry Analysis | No | Gather stack traces, breadcrumbs, traces, tags, Seer AI |
+| 3 | Root Cause Investigation | Yes* | Cross-reference Sentry evidence against codebase |
+| 4 | Implementation | Yes* | TDD: write failing test, implement fix, verify |
+| 5 | Verification Audit | No | Confirm fix covers all affected environments/browsers |
+| 6 | PR & Resolution | No | Create PR, resolve issue in Sentry |
+
+*With `--auto`, ALL gates are skipped. With `--team`, Phase 2 dispatches 3 parallel investigation agents (Sentry Data Analyst, Codebase Investigator, Impact Assessor). With `--pr`, Phase 6 creates a PR and pushes.
+
+**Requires:** Sentry MCP server (`sentry@claude-plugins-official`)
+
+### `/compozy:jira [ticket] [--auto] [--team] [--worktree] [--repo=name] [--pr]`
+
+Jira ticket-driven development — the ticket IS the unit of work. Routes to different flows based on ticket type (Bug → debug, Story/Task → spec).
+
+**Input sources:**
+- Ticket key: `/compozy:jira PROJ-1234`
+- Jira URL: `/compozy:jira https://company.atlassian.net/browse/PROJ-1234`
+- JQL: `/compozy:jira 'project = PROJ AND status = "To Do" ORDER BY priority DESC'`
+- Search: `/compozy:jira "login page broken"`
+- Interactive: `/compozy:jira` (prompts for input)
+
+**Pipeline phases:**
+
+| Phase | Name | Gate | Description |
+|-------|------|------|-------------|
+| 0 | Setup | - | Repo selection, worktree, branch prefix from ticket type |
+| 1 | Ticket Discovery | Yes* | Parse input, fetch via Jira MCP, confirm, transition → In Progress |
+| 2 | Deep Ticket Analysis | No | Gather description, AC, linked issues, subtasks, comments, sprint/epic |
+| 3 | Investigation | Yes* | Bug: root cause investigation. Story: codebase discovery + spec |
+| 4 | Implementation | Yes* | Bug: TDD fix. Story: task decomposition + wave execution |
+| 5 | Verification Audit | No | Run tests + verify each acceptance criterion from ticket |
+| 6 | PR & Ticket Resolution | No | Create PR, add Jira comment, transition → In Review |
+
+*With `--auto`, ALL gates are skipped. With `--team`, Phase 2 dispatches 3 collaborative agents (Bug Investigation Team or Story Planning Team based on ticket type). With `--pr`, Phase 6 creates a PR and pushes.
+
+**Requires:** Jira MCP server (Atlassian Remote MCP or `mcp-atlassian`)
+
 ### `/compozy:finish [branch]`
 
 Complete a development branch — verify tests, present 4 integration options, execute choice, cleanup.
@@ -122,6 +176,7 @@ Each step is independent. You can:
 - `design` without building (explore ideas)
 - `plan` without the full pipeline (prepare for manual implementation)
 - `orchestrate` from a PRD directly (skip design/plan if requirements are clear)
+- `jira` from a Jira ticket (ticket-driven development with lifecycle management)
 - `code-review` any PR (standalone reviews)
 - `pr-respond` to address review feedback on your PR
 - `debug` any issue (standalone debugging)
@@ -144,6 +199,8 @@ Each step is independent. You can:
 | `security-reviewer` | opus | Find security vulnerabilities in PR diffs |
 | `test-analyzer` | sonnet | Analyze test coverage gaps |
 | `requirements-checker` | sonnet | Verify PR implements ticket requirements |
+| `sentry-analyzer` | opus | Extract and synthesize Sentry issue data into structured reports |
+| `jira-analyzer` | opus | Extract and synthesize Jira ticket data into structured reports |
 
 ## Skills
 
@@ -271,6 +328,48 @@ Their findings are synthesized into a single root cause hypothesis. Then:
 /compozy:finish         → commit + PR
 ```
 
+### Jira Ticket (bug)
+
+For bugs tracked in Jira — the ticket drives the investigation and fix:
+
+```
+/compozy:jira PROJ-1234
+```
+
+This detects the ticket type (Bug) and routes to the debug flow:
+1. **Ticket analysis** — gather description, AC, linked issues, comments, sprint context
+2. **Root cause investigation** — systematic debugging from ticket evidence
+3. **TDD fix** — failing test → green → refactor
+4. **Acceptance criteria verification** — check each AC from the ticket
+
+End-to-end with PR and ticket transitions:
+```
+/compozy:jira PROJ-1234 --pr                → fix + PR + transition to In Review
+/compozy:jira PROJ-1234 --auto --pr         → fully autonomous: analyze → fix → PR → Done
+/compozy:jira PROJ-1234 --auto --team --pr  → team investigation + autonomous fix
+```
+
+### Jira Ticket (story/task)
+
+For stories and tasks tracked in Jira — the ticket drives spec generation and implementation:
+
+```
+/compozy:jira PROJ-5678
+```
+
+This detects the ticket type (Story) and routes to the spec flow:
+1. **Ticket analysis** — gather description, AC, linked issues, subtasks, comments
+2. **Codebase discovery + spec generation** — explore codebase, generate spec from ticket requirements
+3. **Task decomposition + wave execution** — parallel TDD implementation
+4. **Acceptance criteria verification** — check each AC from the ticket
+
+```
+/compozy:jira PROJ-5678 --pr               → implement + PR + transition to In Review
+/compozy:jira PROJ-5678 --auto --pr        → fully autonomous end-to-end
+/compozy:jira "login page broken"          → search Jira and pick a ticket
+/compozy:jira                               → interactive: prompted for ticket
+```
+
 ### Exploring Ideas (no implementation)
 
 When you want to brainstorm without committing to building anything:
@@ -331,6 +430,13 @@ Generate, view, or edit specs without running the full pipeline:
 | Simple bug, fully autonomous | `debug` | `--auto --pr` |
 | Complex bug, multiple subsystems | `debug → code-review → finish` | `--team` |
 | Complex bug, fully autonomous with PR | `debug` | `--auto --team --pr` |
+| Production error from Sentry | `sentry-fix` | `--pr` |
+| Sentry error, fully autonomous | `sentry-fix` | `--auto --pr` |
+| Sentry error, team investigation | `sentry-fix` | `--team --pr` |
+| Jira bug ticket | `jira` | `--pr` |
+| Jira story/task ticket | `jira` | `--pr` |
+| Jira ticket, fully autonomous | `jira` | `--auto --pr` |
+| Jira ticket, team investigation | `jira` | `--team --pr` |
 | Exploring ideas, no implementation | `design` | |
 | Review someone's PR | `code-review` | |
 | Address review feedback on your PR | `pr-respond` | `--auto` |
@@ -347,6 +453,8 @@ Generate, view, or edit specs without running the full pipeline:
 - **Review the spec carefully** in orchestrate — it's the single most important artifact
 - **Use `--auto` for fire-and-forget** — runs fully autonomously, no questions asked. Combine with `--worktree` and `--repo` for parallel work across repos
 - **Bug tickets don't need the full pipeline** — go straight to `/compozy:debug` → `/compozy:finish`
+- **Production errors from Sentry** — use `/compozy:sentry-fix` which fetches all Sentry context (stack traces, breadcrumbs, traces, tags) before investigating
+- **Jira ticket-driven development** — use `/compozy:jira PROJ-1234` to let the ticket drive the workflow. Bugs route to debug flow, stories route to spec flow. Manages ticket lifecycle (In Progress → In Review → Done)
 - **Use `--team` for complex work** — adds reviewer/architect agents to orchestrate, 3-agent investigation to debug
 - **Use `--worktree` for parallel work** — each command runs in its own isolated git worktree, so you can open multiple terminals and run different tasks simultaneously without file conflicts
 - **Use `--repo=name` from parent directories** — if you keep repos in `~/Developer/`, run compozy from there and point at the right repo: `--repo=Discover`
