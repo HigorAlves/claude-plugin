@@ -8,6 +8,7 @@ tools:
   - Glob
   - Grep
   - "mcp__jira_*"
+maxTurns: 20
 ---
 
 # Jira Analyzer Agent

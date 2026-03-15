@@ -127,6 +127,10 @@ Jira workflows are configurable per project. To transition a ticket:
 
 **Actions**:
 
+0. **MCP availability check** — Before any Jira API calls, verify the Jira MCP tools are available by attempting a lightweight call. If the MCP tools (`mcp__jira_*`) are not available or return a connection error:
+   - Report: "Jira MCP server is not available. To use `/compozy:jira`, configure a Jira MCP server in your Claude Code settings."
+   - Stop the pipeline — do not proceed without Jira access.
+
 1. **Parse the input** and fetch ticket data:
 
    - **If ticket key or URL**: Fetch directly via Jira MCP tools

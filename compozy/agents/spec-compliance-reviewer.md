@@ -7,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Spec Compliance Reviewer Agent

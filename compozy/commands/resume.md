@@ -69,7 +69,16 @@ Pipeline artifacts are stored in `compozy/<branch-name>/files/` — see the orch
    - Branch name (`$BRANCH_NAME`)
    - Any notes or context
 
-4. Determine resume point:
+4. **Validate checkpoint integrity**:
+   - Verify required fields exist: `**Phase**`, `**Status**`, `**Branch name**`, `**Compozy dir**`
+   - Verify phase number is a valid integer (0-7 for orchestrate, 0-6 for sentry-fix/jira)
+   - Verify status is one of: `complete`, `in_progress`, `failed`
+   - Verify `$COMPOZY_DIR` path exists on disk
+   - If the `**Command**` field references `sentry-fix`, verify `**Sentry input**` exists
+   - If the `**Command**` field references `jira`, verify `**Jira input**` and `**Flow**` exist
+   - If any validation fails, report the specific error and suggest: "The checkpoint may be corrupted. Run `/compozy:orchestrate` to start fresh, or manually fix `$COMPOZY_DIR/checkpoint.md`."
+
+5. Determine resume point:
    - If `$1` provided: use that phase number (warn if jumping backward or skipping phases)
    - If no argument: resume from the phase after the last completed one
 

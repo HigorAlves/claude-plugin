@@ -16,6 +16,10 @@ tools:
   - "Bash(go *:*)"
   - "Bash(cargo *:*)"
   - "Bash(pip *:*)"
+maxTurns: 40
+skills:
+  - compozy:tdd
+  - compozy:verification
 ---
 
 # Task Implementer Agent

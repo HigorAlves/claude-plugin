@@ -13,7 +13,7 @@ description: Commit, push, and open a PR
 
 Based on the above changes:
 
-1. Create a new branch if on main
+1. **IMPORTANT:** If on `main`, `master`, or `develop`, create a new feature branch first
 2. Create a single commit with an appropriate message
 3. Push the branch to origin
 4. Create a pull request using `gh pr create`

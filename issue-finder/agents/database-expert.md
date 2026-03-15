@@ -1,4 +1,5 @@
 ---
+name: database-expert
 description: Find database issues, query problems, and data modeling flaws
 model: sonnet
 color: blue
@@ -6,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Database Expert Agent

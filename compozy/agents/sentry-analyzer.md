@@ -8,6 +8,7 @@ tools:
   - Glob
   - Grep
   - "mcp__plugin_sentry_sentry__*"
+maxTurns: 20
 ---
 
 # Sentry Analyzer Agent

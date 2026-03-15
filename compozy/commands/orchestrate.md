@@ -344,6 +344,12 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 2. **If `--team` flag is set:** Use the `compozy:team-agents` skill's Implementation Team pattern. For each wave, dispatch implementers in parallel, then a reviewer agent checks all outputs before proceeding. After all waves, an architect agent reviews the complete implementation for cross-wave coherence. Fix any issues found before Phase 6.
 
+   **Pre-flight validation** (run before either mode):
+   - Parse the task manifest and build a file→task map
+   - For each wave, verify no two tasks in the same wave touch the same file
+   - If a conflict is found, report it: "File exclusivity violation: `[file]` is owned by both `[T-X]` and `[T-Y]` in Wave [N]. Re-run Phase 4 to fix the manifest."
+   - Block execution until the conflict is resolved
+
 3. **If solo mode (default):** For each wave (sequential):
 
    a. **Launch all tasks in the wave in parallel** using the Task tool:
@@ -360,11 +366,11 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
       - **`DONE`** → Proceed normally, task ready for review
       - **`DONE_WITH_CONCERNS`** → Read the concerns. If critical (file grew too large, design issue found), address before review. If minor, note for review phase.
       - **`NEEDS_CONTEXT`** → Provide the requested context and re-dispatch the task agent
-      - **`BLOCKED`** → Assess the blocker:
-        - Context problem → provide context, re-dispatch
-        - Reasoning limit → re-dispatch with opus model
-        - Task too large → decompose into subtasks
-        - Spec/plan wrong → escalate to user with `AskUserQuestion`
+      - **`BLOCKED`** → Escalate through retry tiers:
+        1. **Retry with context** — provide the missing context and re-dispatch with the same model
+        2. **Retry with opus** — if still blocked, re-dispatch with `model: opus` for stronger reasoning
+        3. **Decompose** — if still blocked, split the task into 2-3 subtasks and dispatch each independently
+        4. **Escalate** — if all retries fail, use `AskUserQuestion` to present the blocker to the user with options: "Provide guidance" / "Skip this task" / "Abort pipeline"
 
    c. **Update progress** in `$COMPOZY_DIR/progress.md`:
       ```markdown

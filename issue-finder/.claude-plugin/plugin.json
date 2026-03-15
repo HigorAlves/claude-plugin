@@ -4,5 +4,7 @@
   "description": "Analyze codebases to discover issues and create GitHub issues",
   "author": {
     "name": "Claude Helpers"
-  }
+  },
+  "repository": "https://github.com/higoralves/claude-helpers",
+  "license": "MIT"
 }

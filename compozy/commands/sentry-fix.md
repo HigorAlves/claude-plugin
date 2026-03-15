@@ -103,6 +103,10 @@ Parse the user's input from `$ARGUMENTS`:
 
 **Actions**:
 
+0. **MCP availability check** — Before any Sentry API calls, verify the Sentry MCP server is available by attempting a lightweight call (e.g., `list_projects` or `get_organization`). If the MCP tools are not available or return a connection error:
+   - Report: "Sentry MCP server is not available. To use `/compozy:sentry-fix`, configure the Sentry MCP server in your Claude Code settings. See: https://github.com/getsentry/sentry-mcp"
+   - Stop the pipeline — do not proceed without Sentry access.
+
 1. **Parse the input** and fetch issue data:
 
    - **If URL or issue ID**: Call `get_issue_details` directly

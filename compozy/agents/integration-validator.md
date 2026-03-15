@@ -15,6 +15,7 @@ tools:
   - "Bash(cargo *:*)"
   - "Bash(pip *:*)"
   - "Bash(make *:*)"
+maxTurns: 25
 ---
 
 # Integration Validator Agent

@@ -1,4 +1,5 @@
 ---
+name: bug-hunter
 description: Find bugs, logic errors, and runtime issues in code
 model: sonnet
 color: red
@@ -6,6 +7,8 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 15
+permissionMode: plan
 ---
 
 # Bug Hunter Agent

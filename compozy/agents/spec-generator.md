@@ -7,6 +7,7 @@ tools:
   - Read
   - Glob
   - Grep
+maxTurns: 25
 ---
 
 # Spec Generator Agent
