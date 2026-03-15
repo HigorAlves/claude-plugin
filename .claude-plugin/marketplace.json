@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "A collection of productivity plugins for Claude Code — development orchestration, code review, PR management, issue discovery, git workflows, output styles, and frontend design",
-    "version": "2.4.0"
+    "version": "2.5.0"
   },
   "plugins": [
     {
       "name": "compozy",
       "source": "./compozy",
       "description": "Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. Jira ticket-driven and Sentry error-driven workflows. 12 commands, 15 agents, 10 skills. Flags: --auto (full autopilot), --team (collaborative agents), --worktree (parallel isolation), --repo (multi-repo support).",
-      "version": "2.4.0",
+      "version": "2.5.0",
       "category": "development",
       "tags": ["orchestration", "spec", "prd", "workflow", "tasks", "tdd", "debugging"]
     },
@@ -20,7 +20,7 @@
       "name": "pr-toolkit",
       "source": "./pr-toolkit",
       "description": "Comprehensive PR review agents specializing in comments, tests, error handling, type design, code quality, and code simplification",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "category": "code-quality",
       "tags": ["pr", "pull-request", "review", "tests", "types"]
     },
@@ -28,7 +28,7 @@
       "name": "issue-finder",
       "source": "./issue-finder",
       "description": "Analyze codebases to discover bugs, security vulnerabilities, architectural problems, and improvements, then create GitHub issues",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "category": "code-quality",
       "tags": ["issues", "bugs", "security", "audit", "github"]
     },
@@ -36,7 +36,7 @@
       "name": "commit-commands",
       "source": "./commit-commands",
       "description": "Streamline your git workflow with simple commands for committing, pushing, and creating pull requests",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "category": "git",
       "tags": ["git", "commit", "push", "pull-request", "workflow"]
     },
@@ -44,7 +44,7 @@
       "name": "frontend-design",
       "source": "./frontend-design",
       "description": "Frontend design skill for UI/UX implementation",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "category": "development",
       "tags": ["frontend", "ui", "ux", "design", "css"]
     },
@@ -52,7 +52,7 @@
       "name": "explanatory-output-style",
       "source": "./explanatory-output-style",
       "description": "Adds educational insights about implementation choices and codebase patterns (mimics the deprecated Explanatory output style)",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "category": "output-style",
       "tags": ["output", "style", "educational", "explanations"]
     },
@@ -60,7 +60,7 @@
       "name": "learning-output-style",
       "source": "./learning-output-style",
       "description": "Interactive learning mode that requests meaningful code contributions at decision points (mimics the unshipped Learning output style)",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "category": "output-style",
       "tags": ["output", "style", "learning", "interactive"]
     }
