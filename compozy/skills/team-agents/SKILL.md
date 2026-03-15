@@ -198,6 +198,150 @@ Phase 1 (synthesis):
 - Convergence = high confidence (if all 3 point to same cause, it's likely right)
 - Divergence = the bug is more complex than it appears (investigate further)
 
+### Sentry Investigation Team (sentry-fix --team)
+
+Used during Phase 2 (Deep Sentry Analysis). Multiple agents investigate the Sentry issue from different angles simultaneously.
+
+**Roles:**
+1. **Sentry Data Analyst** — Gathers all Sentry data: stack traces, breadcrumbs, event distributions, tag breakdowns, traces, and Seer AI analysis
+2. **Codebase Investigator** — Reads stack trace files in the local codebase, traces data flow through the call chain, checks `git blame`/`git log` for recent changes to affected files
+3. **Impact Assessor** — Analyzes tag distributions (browser, OS, environment, release), finds related Sentry issues, estimates blast radius and user impact
+
+**Flow:**
+```
+Phase 2 (parallel investigation):
+  1. Dispatch all 3 agents simultaneously with the Sentry issue ID and initial details
+  2. Sentry Data Analyst (tools: mcp__plugin_sentry_sentry__*):
+     "Gather ALL available Sentry data for this issue:
+      - Full stack trace with source context
+      - Breadcrumbs leading to the error
+      - Event distribution across time, environment, release
+      - Tag value distributions (browser, OS, transaction)
+      - Trace spans if available
+      - Seer AI analysis
+      Return: structured analysis report."
+  3. Codebase Investigator (tools: Read, Glob, Grep, Bash(git *)):
+     "Read the files referenced in this stack trace: [stack trace files].
+      - Trace the data flow backward from the crash point
+      - Check git log and git blame for recent changes to these files
+      - Find similar working code paths in the codebase
+      Return: local code context and suspicious recent changes."
+  4. Impact Assessor (tools: mcp__plugin_sentry_sentry__*):
+     "Analyze the impact scope of this issue:
+      - Get tag distributions (browser, OS, environment, release, transaction)
+      - Search for related issues with similar error types
+      - Determine if this is a regression (started with a specific release)
+      Return: impact report with blast radius estimate."
+
+Phase 2 (synthesis):
+  5. Read all 3 reports
+  6. Synthesize findings — where do the investigations converge?
+  7. Cross-reference: Sentry data + local code + impact scope = root cause hypothesis
+  8. Proceed to Phase 3 with consolidated evidence
+```
+
+**Why this helps:**
+- Sentry data + local code + impact analysis cover all investigative angles simultaneously
+- Convergence = high confidence (if data analyst and codebase investigator point to same cause, it's likely right)
+- Impact assessor prevents tunnel vision — the fix must address ALL affected environments, not just the first one found
+
+### Jira Bug Investigation Team (jira --team, Phase 2, `$FLOW = bug`)
+
+Used during Phase 2 (Deep Ticket Analysis) when the ticket is a Bug/Defect. Multiple agents investigate the Jira bug from different angles simultaneously.
+
+**Roles:**
+1. **Ticket Context Analyst** — Gathers all Jira data: description, acceptance criteria, linked issues, subtasks, comments, sprint/epic context
+2. **Codebase Investigator** — Reads files referenced in the ticket, traces data flow, checks `git blame`/`git log` for recent changes to affected areas
+3. **Impact Assessor** — Analyzes related bugs in the same sprint/epic, examines linked issues, estimates scope of the fix
+
+**Flow:**
+```
+Phase 2 (parallel investigation):
+  1. Dispatch all 3 agents simultaneously with the Jira ticket key and initial details
+  2. Ticket Context Analyst (tools: mcp__jira_*):
+     "Gather ALL available Jira data for this bug ticket:
+      - Full description with reproduction steps
+      - Acceptance criteria / definition of done
+      - Linked issues (especially 'blocks' and 'is blocked by')
+      - Subtasks and their status
+      - Comments with decisions and clarifications
+      - Sprint goal and epic context
+      Return: structured ticket analysis report."
+  3. Codebase Investigator (tools: Read, Glob, Grep, Bash(git *)):
+     "Investigate the codebase based on this bug ticket: [description summary].
+      - Read files likely related to the reported behavior
+      - Trace data flow through the affected code paths
+      - Check git log and git blame for recent changes
+      - Find similar working code paths
+      Return: local code context and suspicious recent changes."
+  4. Impact Assessor (tools: mcp__jira_*):
+     "Analyze the impact scope of this bug:
+      - Search for related bugs in the same sprint/epic/component
+      - Check linked issues for dependencies and duplicates
+      - Estimate fix scope (single file vs multi-component)
+      Return: impact report with related tickets and scope estimate."
+
+Phase 2 (synthesis):
+  5. Read all 3 reports
+  6. Synthesize findings — where do the investigations converge?
+  7. Cross-reference: ticket context + local code + impact = root cause hypothesis
+  8. Proceed to Phase 3 with consolidated evidence
+```
+
+**Why this helps:**
+- Ticket data + local code + impact analysis cover all investigative angles simultaneously
+- Convergence = high confidence (if analyst and investigator point to same cause, it's likely right)
+- Impact assessor prevents tunnel vision — the fix must address ALL related issues, not just the immediate ticket
+
+### Jira Story Planning Team (jira --team, Phase 2, `$FLOW = story`)
+
+Used during Phase 2 (Deep Ticket Analysis) when the ticket is a Story/Task/Improvement. Multiple agents analyze the ticket and codebase to prepare for spec generation.
+
+**Roles:**
+1. **Ticket Context Analyst** — Gathers all Jira data: description, acceptance criteria, linked issues, subtasks, comments, sprint/epic context
+2. **Codebase Explorer** — Explores architecture, similar features, existing patterns relevant to the story
+3. **Requirements Analyst** — Extracts structured requirements from the ticket and linked issues, identifies gaps and ambiguities
+
+**Flow:**
+```
+Phase 2 (parallel investigation):
+  1. Dispatch all 3 agents simultaneously with the Jira ticket key and initial details
+  2. Ticket Context Analyst (tools: mcp__jira_*):
+     "Gather ALL available Jira data for this story/task:
+      - Full description with user value statement
+      - Acceptance criteria / definition of done
+      - Linked issues (especially related stories and epics)
+      - Subtasks and their status
+      - Comments with decisions and clarifications
+      - Sprint goal and epic context
+      Return: structured ticket analysis report."
+  3. Codebase Explorer (tools: Read, Glob, Grep):
+     "Explore the codebase for context relevant to this story: [description summary].
+      - Find similar features already implemented
+      - Identify architectural patterns to follow
+      - Map affected modules and components
+      - Note conventions for testing, naming, structure
+      Return: codebase context with patterns and conventions."
+  4. Requirements Analyst (tools: mcp__jira_*, Read):
+     "Extract structured requirements from this ticket and its linked issues:
+      - Convert acceptance criteria into testable requirements
+      - Identify implicit requirements from the description
+      - Check linked issues for additional requirements or constraints
+      - Flag gaps, ambiguities, or conflicting requirements
+      Return: structured requirements list with gaps flagged."
+
+Phase 2 (synthesis):
+  5. Read all 3 reports
+  6. Synthesize findings — requirements + codebase context + ticket data
+  7. Produce consolidated input for spec generation
+  8. Proceed to Phase 3 with full context
+```
+
+**Why this helps:**
+- Requirements analyst catches implicit requirements and gaps before spec generation
+- Codebase explorer ensures the spec follows existing patterns
+- Ticket analyst provides full stakeholder context (comments, linked issues, epic goals)
+
 ### Design Team (design --team)
 
 Used during approach exploration. Multiple agents propose designs independently.

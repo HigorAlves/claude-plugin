@@ -23,6 +23,8 @@ allowed-tools:
   - Task
   - AskUserQuestion
   - "mcp__plugin_github_github__*"
+  - "mcp__plugin_sentry_sentry__*"
+  - "mcp__jira_*"
 ---
 
 # Compozy: Resume Orchestration
@@ -61,6 +63,7 @@ Pipeline artifacts are stored in `compozy/<branch-name>/files/` — see the orch
    - If **none** have a checkpoint: "No checkpoint found. Run `/compozy:orchestrate` to start a new pipeline."
 
 3. Read `$COMPOZY_DIR/checkpoint.md` and parse:
+   - **Command** field — identifies the originating command (`orchestrate`, `sentry-fix`, or `jira`). If no `**Command**` field is present, assume `orchestrate` for backwards compatibility. The resume flow follows that command's phase definitions.
    - Last completed phase number
    - Status of that phase
    - Branch name (`$BRANCH_NAME`)
@@ -79,9 +82,24 @@ Read all available `$COMPOZY_DIR/` artifacts to rebuild context:
    - `$COMPOZY_DIR/tech-spec.md` — the approved spec
 
 2. **Read based on resume phase**:
+
+   **For `orchestrate` command:**
    - Resuming Phase 2+: read `$COMPOZY_DIR/codebase-context.md`
    - Resuming Phase 4+: read `$COMPOZY_DIR/task-manifest.md`
    - Resuming Phase 5+: read `$COMPOZY_DIR/progress.md`
+
+   **For `sentry-fix` command:**
+   - Resuming Phase 2+: read `$COMPOZY_DIR/sentry-analysis.md` (if exists)
+   - Resuming Phase 3+: read `$COMPOZY_DIR/root-cause.md` (if exists)
+   - Resuming Phase 5+: read `$COMPOZY_DIR/verification.md` (if exists)
+
+   **For `jira` command:**
+   - Resuming Phase 2+: read `$COMPOZY_DIR/ticket-analysis.md` (if exists)
+   - Resuming Phase 3+ (bug flow): read `$COMPOZY_DIR/root-cause.md` (if exists)
+   - Resuming Phase 3+ (story flow): read `$COMPOZY_DIR/tech-spec.md` (if exists)
+   - Resuming Phase 4+ (story flow): read `$COMPOZY_DIR/task-manifest.md`, `$COMPOZY_DIR/progress.md` (if exist)
+   - Resuming Phase 5+: read `$COMPOZY_DIR/verification.md` (if exists)
+   - Note: Check `**Flow**` field in checkpoint (`bug` or `story`) to determine which artifacts to read
 
 3. Summarize restored context:
    ```
@@ -162,6 +180,73 @@ Continue the orchestration pipeline from the determined phase. Follow the exact 
         description: "Create a fresh PR from current state"
     multiSelect: false
   ```
+
+---
+
+## Sentry-Fix Phase Resume Notes
+
+When the checkpoint's `**Command**` field is `sentry-fix`, follow these phase definitions instead of the orchestrate phases above.
+
+### Resuming Phase 1 (Issue Discovery)
+- Re-run issue discovery from scratch — call `get_issue_details` with the Sentry issue ID from the checkpoint
+
+### Resuming Phase 2 (Deep Sentry Analysis)
+- Read `$COMPOZY_DIR/sentry-analysis.md` if it exists
+- If stale (e.g., checkpoint notes indicate incomplete analysis), re-gather Sentry data via the `sentry-analyzer` agent
+- If complete, proceed to Phase 3
+
+### Resuming Phase 3 (Root Cause Investigation)
+- Read `$COMPOZY_DIR/root-cause.md` if it exists
+- Cross-reference the root cause against the current codebase (files may have changed since the analysis)
+- If root cause file is missing, re-run investigation starting from the Sentry analysis
+
+### Resuming Phase 4 (Implementation)
+- Check if a reproduction test already exists (look for test files in the diff)
+- Check if a fix has been partially applied
+- If test exists but fix is incomplete, continue from fix implementation
+- If no test yet, start from writing the reproduction test
+
+### Resuming Phase 5 (Verification)
+- Re-run verification from scratch (tests should be re-run fresh, not trusted from prior runs)
+
+### Resuming Phase 6 (PR & Resolution)
+- Check if branch already exists and has commits
+- Check if PR already exists
+- Check if Sentry issue is already resolved
+- Only perform actions not yet completed
+
+## Jira Phase Resume Notes
+
+When the checkpoint's `**Command**` field is `jira`, follow these phase definitions. The checkpoint also stores a `**Flow**` field (`bug` or `story`) which determines the investigation and implementation path.
+
+### Resuming Phase 1 (Ticket Discovery)
+- Re-fetch the ticket via Jira MCP tools using the ticket key from the checkpoint — status may have changed since the last run
+- Re-detect `$FLOW` from ticket type
+
+### Resuming Phase 2 (Deep Ticket Analysis)
+- Read `$COMPOZY_DIR/ticket-analysis.md` if it exists
+- Check `$FLOW` from checkpoint to know which team pattern to use (if `--team`)
+- If stale or incomplete, re-gather Jira data via the `jira-analyzer` agent
+- If complete, proceed to Phase 3
+
+### Resuming Phase 3 (Investigation)
+- **If `$FLOW = bug`**: Read `$COMPOZY_DIR/root-cause.md` if it exists. Cross-reference root cause against the current codebase (files may have changed). If missing, re-run investigation from ticket analysis.
+- **If `$FLOW = story`**: Read `$COMPOZY_DIR/tech-spec.md` if it exists. Check if it's still current against the codebase. If missing, re-run spec generation from ticket analysis.
+
+### Resuming Phase 4 (Implementation)
+- Check if tests and/or implementation already exist (look for test files and changes in the diff)
+- **If `$FLOW = bug`**: Check for existing reproduction test; if fix is partially applied, continue from where it left off
+- **If `$FLOW = story`**: Read `$COMPOZY_DIR/task-manifest.md` and `$COMPOZY_DIR/progress.md` to determine which waves/tasks are complete; skip completed tasks, resume from first incomplete wave
+
+### Resuming Phase 5 (Verification)
+- Re-run verification from scratch — tests and acceptance criteria checks should be run fresh, not trusted from prior runs
+
+### Resuming Phase 6 (PR & Ticket Resolution)
+- Check if branch already exists and has commits
+- Check if PR already exists
+- Check current Jira ticket status — only transition if not already in the target state
+- Check if Jira comment with PR link was already added
+- Only perform actions not yet completed
 
 ## Error Handling
 
