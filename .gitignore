@@ -29,6 +29,10 @@ tmp/
 temp/
 *.tmp
 
+# Compozy runtime artifacts (not committed)
+compozy/compozy.json
+compozy/*/files/compozy.json
+
 # Node (if any scripts use it)
 node_modules/
 npm-debug.log*

@@ -44,6 +44,21 @@ You are running the Compozy design flow — a structured brainstorming and desig
    - Use the `compozy:worktrees` skill to create an isolated worktree
    - All subsequent steps run inside the worktree
 
+3. **Create `$COMPOZY_DIR`** — `compozy/<sanitized-branch-name>/files/`
+
+4. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
+    - `session_id`: generate a UUID (`uuidgen`)
+    - `schema_version`: `"1.0.0"`, `command`: `"design"`, `status`: `"in_progress"`
+    - `created_at` / `updated_at`: current ISO-8601 timestamp
+    - `repository`, `workspace`, `branch`, `input`, `flags`: standard structure (see orchestrate command)
+    - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
+    - `artifacts`: `{}`
+    - `contributors.human`: from git config, `contributors.agents`: `[]`
+
+5. **Register in central registry** `compozy/compozy.json`:
+    - If the file doesn't exist: create with `schema_version`, `repository` block, and empty `orchestrations` array
+    - Append entry with: `session_id`, `command: "design"`, `status: "in_progress"`, `branch`, `input`, `workspace`, `current_phase: 0`, `total_phases: 7`, `progress: "Setup complete"`, timestamps, `detail_path`
+
 ### Step 1: Explore Project Context
 
 Understand what already exists:
@@ -96,6 +111,10 @@ Present the design in sections, getting approval per section using `AskUserQuest
 
 Save the approved design to `compozy/<branch>/files/design-spec.md`.
 
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `5`. Add `artifacts.design_spec` with `{ path: "design-spec.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "design" }, summary: "<design title>" }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update `current_phase` to `5`, `progress` to `"Design spec written"`, `updated_at` to now.
+
 Use the branch naming convention from the topic:
 - `feat/<short-slug>` for features
 - `fix/<short-slug>` for bug fixes
@@ -147,6 +166,10 @@ AskUserQuestion:
       description: "Keep the design spec, implement later"
   multiSelect: false
 ```
+
+**Update compozy.json**:
+- Detail file: Set `status` to `"complete"`. Set `pipeline.current_phase` to `7`. Update `updated_at`.
+- Central registry: Set `status` to `"complete"`, `progress` to `"Design approved"`, `updated_at` to now.
 
 ## Key Principles
 
