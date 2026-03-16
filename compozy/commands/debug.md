@@ -69,8 +69,7 @@ If you haven't completed Phase 1, you cannot propose fixes.
     - `schema_version`: `"1.0.0"`, `command`: `"debug"`, `status`: `"in_progress"`
     - `created_at` / `updated_at`: current ISO-8601 timestamp
     - `repository`: from `git remote get-url origin`, `git rev-parse --show-toplevel`, default branch
-    - `workspace`, `branch`, `input`: same structure as orchestrate
-    - `flags`: same structure as orchestrate, plus `ex_ticket`
+    - `workspace`, `branch`, `input`, `flags`: same structure as orchestrate
     - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 5, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts`: `{ checkpoint: { path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "debug" }, summary: "Phase 0 — Setup complete" } }`
