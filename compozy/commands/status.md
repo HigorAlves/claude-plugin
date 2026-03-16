@@ -40,6 +40,8 @@ Quick read-only command to check the status of all active orchestrations.
 6. **For each in-progress orchestration**, also show:
    - If Phase 5: task completion count — from registry `progress` field, or from `progress.md` if using checkpoint fallback
    - Workspace info: whether running in main workspace or a worktree (and which path)
+   - If `external_ticket` is set (from detail `compozy.json`): display `**External ticket**: <url>`
+   - If `claude_session_id` is set (from detail `compozy.json`): display `**Claude session**: <id>` with note `(resume with: claude --resume <id>)`
    - If blocked: the blocker description
    - Suggested next action: "Run `/compozy:resume` to continue" or "Run `/compozy:resume [phase]` to restart from phase [N]"
 

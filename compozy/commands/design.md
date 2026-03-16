@@ -1,6 +1,6 @@
 ---
 description: Brainstorming and design — explore requirements, ask questions, propose approaches, and produce a design spec
-argument-hint: "[topic or feature description] [--auto] [--worktree] [--repo=name]"
+argument-hint: "[topic or feature description] [--auto] [--worktree] [--repo=name] [--ex-ticket=<url>]"
 allowed-tools:
   - Read
   - Write
@@ -33,6 +33,7 @@ You are running the Compozy design flow — a structured brainstorming and desig
 - `--auto` → Full autopilot. Skip ALL user interactions — make best-guess decisions for clarifying questions, approach selection, and section approvals. Produces the design spec end-to-end without stopping.
 - `--worktree` → Run design exploration in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before exploration begins. This allows running multiple Claude instances on different design tasks in parallel without conflicts.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=Discover` will `cd Discover` first.
+- `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url`.
 
 ## Process
 
@@ -48,9 +49,12 @@ You are running the Compozy design flow — a structured brainstorming and desig
 
 4. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
     - `session_id`: generate a UUID (`uuidgen`)
+    - `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
     - `schema_version`: `"1.0.0"`, `command`: `"design"`, `status`: `"in_progress"`
     - `created_at` / `updated_at`: current ISO-8601 timestamp
-    - `repository`, `workspace`, `branch`, `input`, `flags`: standard structure (see orchestrate command)
+    - `repository`, `workspace`, `branch`, `input`: standard structure (see orchestrate command)
+    - `flags`: standard structure, plus `ex_ticket`
+    - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts`: `{}`
     - `contributors.human`: from git config, `contributors.agents`: `[]`

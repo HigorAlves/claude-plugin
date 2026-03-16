@@ -70,7 +70,7 @@ Pipeline artifacts are stored in `compozy/<branch-name>/files/` — see the orch
    - Any notes or context
 
 4. **Validate checkpoint integrity**:
-   - Verify required fields exist: `**Phase**`, `**Status**`, `**Branch name**`, `**Compozy dir**`
+   - Verify required fields exist: `**Phase**`, `**Status**`, `**Branch name**`, `**Compozy dir**`, and optionally `**External ticket**`
    - Verify phase number is a valid integer (0-7 for orchestrate, 0-6 for sentry-fix/jira)
    - Verify status is one of: `complete`, `in_progress`, `failed`
    - Verify `$COMPOZY_DIR` path exists on disk
@@ -119,14 +119,18 @@ Read all available `$COMPOZY_DIR/` artifacts to rebuild context:
    **Resuming from**: Phase [N+1] — [Phase Name]
    **Branch**: [branch name from checkpoint]
    **Session ID**: [from compozy.json, if available]
+   **Claude session**: [claude_session_id from compozy.json, if set] (resume with: `claude --resume <id>`)
+   **External ticket**: [external_ticket.url from compozy.json, if set]
    **Working dir**: [resolved $COMPOZY_DIR path]
    **Spec**: [title from tech-spec.md]
    **Tasks**: [count] tasks across [count] waves
    **Progress**: [X]/[Y] tasks completed
    ```
 
-4. **Update compozy.json on resume** (if the file exists):
-   - Detail file (`$COMPOZY_DIR/compozy.json`): Update `status` to `"in_progress"` (if it was interrupted), update `updated_at` to now. As each phase completes during the resumed run, continue updating `pipeline.phases`, `artifacts`, and `contributors.agents` following the same patterns as the original command.
+4. **Re-capture Claude session ID** — Run `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null` and update `claude_session_id` in `$COMPOZY_DIR/compozy.json` with the new value. This ensures the stored ID always reflects the latest active session, so if the user needs to close and reopen again, the most recent ID is available.
+
+5. **Update compozy.json on resume** (if the file exists):
+   - Detail file (`$COMPOZY_DIR/compozy.json`): Update `status` to `"in_progress"` (if it was interrupted), update `claude_session_id` (from step 4), update `updated_at` to now. As each phase completes during the resumed run, continue updating `pipeline.phases`, `artifacts`, and `contributors.agents` following the same patterns as the original command.
    - Central registry (`compozy/compozy.json`): Update this orchestration's `status` to `"in_progress"`, `updated_at` to now. Continue updating `current_phase` and `progress` as phases complete.
    - If compozy.json doesn't exist (old orchestration): proceed without it — backwards compatible. Optionally create it now using the checkpoint data to bootstrap the metadata.
 

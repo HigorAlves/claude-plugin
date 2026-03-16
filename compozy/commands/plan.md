@@ -1,6 +1,6 @@
 ---
 description: Create a TDD-structured implementation plan from a design spec or requirements
-argument-hint: "[design spec path or inline requirements]"
+argument-hint: "[design spec path or inline requirements] [--ex-ticket=<url>]"
 allowed-tools:
   - Read
   - Write
@@ -36,8 +36,11 @@ If a design spec exists at `compozy/<branch>/files/design-spec.md`, use it.
 
 **Create `$COMPOZY_DIR/compozy.json`** if it doesn't already exist (it may exist from a prior `/compozy:design` run):
 - `session_id`: generate a UUID (`uuidgen`)
+- `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
 - `schema_version`: `"1.0.0"`, `command`: `"plan"`, `status`: `"in_progress"`
-- Standard structure: `repository`, `workspace`, `branch`, `input`, `flags`, `contributors`
+- Standard structure: `repository`, `workspace`, `branch`, `input`, `contributors`
+- `flags`: standard structure, plus `ex_ticket`
+- `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
 - `pipeline`: `{ current_phase: 0, total_phases: 2, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
 
 **Register in central registry** `compozy/compozy.json` if not already registered for this `session_id`.

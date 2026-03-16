@@ -1,6 +1,6 @@
 ---
 description: Systematic debugging — find root cause before fixing, with structured investigation phases
-argument-hint: "[bug description, error message, or test failure] [--auto] [--team] [--worktree] [--repo=name] [--pr]"
+argument-hint: "[bug description, error message, or test failure] [--auto] [--team] [--worktree] [--repo=name] [--pr] [--ex-ticket=<url>]"
 allowed-tools:
   - Read
   - Write
@@ -49,6 +49,7 @@ If you haven't completed Phase 1, you cannot propose fixes.
 - `--worktree` → Run debugging in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before investigation begins. This allows running multiple Claude instances on different bugs in parallel without file conflicts. The worktree branch is named `fix/<bug-slug>`.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=Discover` will `cd Discover` first.
 - `--pr` → After fixing the bug, automatically create a branch (if not already on one), commit, push, and open a pull request. Runs Phase 5 (PR Creation) after Phase 4. Implies committing the fix.
+- `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url` and included in the PR description if a PR is created.
 
 ## Process
 
@@ -64,10 +65,13 @@ If you haven't completed Phase 1, you cannot propose fixes.
 
 4. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
     - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
     - `schema_version`: `"1.0.0"`, `command`: `"debug"`, `status`: `"in_progress"`
     - `created_at` / `updated_at`: current ISO-8601 timestamp
     - `repository`: from `git remote get-url origin`, `git rev-parse --show-toplevel`, default branch
-    - `workspace`, `branch`, `input`, `flags`: same structure as orchestrate
+    - `workspace`, `branch`, `input`: same structure as orchestrate
+    - `flags`: same structure as orchestrate, plus `ex_ticket`
+    - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 5, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts`: `{ checkpoint: { path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "debug" }, summary: "Phase 0 — Setup complete" } }`
     - `contributors.human`: from git config, `contributors.agents`: `[]`
@@ -252,6 +256,7 @@ If `--pr` flag is set, after the fix is committed:
    ```bash
    gh pr create --title "fix: <short bug description>" --body "$(cat <<'EOF'
    ## Summary
+   [If --ex-ticket was provided: `- **External ticket**: <url>`]
    - Root cause: <1-line root cause>
    - Fix: <1-line fix description>
 

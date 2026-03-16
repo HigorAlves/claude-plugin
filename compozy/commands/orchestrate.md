@@ -1,6 +1,6 @@
 ---
 description: Spec-driven development orchestration — analyze requirements, generate tech specs, decompose into parallel tasks, execute, review, and create PRs
-argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto] [--team] [--worktree] [--repo=name]"
+argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto] [--team] [--worktree] [--repo=name] [--ex-ticket=<url>]"
 allowed-tools:
   - "Bash(gh issue view:*)"
   - "Bash(gh issue list:*)"
@@ -69,6 +69,7 @@ Parse the user's input from `$ARGUMENTS`:
 - `--team` → Enable team mode for Phases 3, 4, and 5. In Phase 3, a spec critic and testability reviewer validate the generated spec. In Phase 4, a dependency auditor and complexity estimator review the task breakdown. In Phase 5, implementation teams include reviewer and architect agents. See `compozy:team-agents` skill for team compositions and flow.
 - `--worktree` → Run the entire pipeline in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before any work begins (Phase 0). This allows running multiple Claude instances on different tasks in parallel without file conflicts.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting the pipeline. Example: `--repo=Discover` will `cd Discover` first. If the directory doesn't exist, report an error.
+- `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url` and included in the PR description if a PR is created.
 
 ---
 
@@ -98,6 +99,7 @@ Parse the user's input from `$ARGUMENTS`:
 **Branch name**: [branch-name with slashes, e.g., feat/142-notification-prefs]
 **Compozy dir**: [resolved $COMPOZY_DIR path, e.g., compozy/feat-142-notification-prefs/files]
 **Auto mode**: [yes/no]
+**External ticket**: [url or "none"]
 **Started**: [timestamp]
 ```
 
@@ -105,6 +107,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 10. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
     - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
     - `schema_version`: `"1.0.0"`
     - `command`: `"orchestrate"`
     - `status`: `"in_progress"`
@@ -114,7 +117,8 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
     - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
     - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
     - `input`: `{ type, source, resolved_url (if applicable), title }`
-    - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `flags`: `{ auto, team, worktree, repo, pr, ex_ticket }`
+    - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "orchestrate" }, summary: "Phase 0 — Setup complete" }`
     - `contributors.human`: from `git config user.name`, `git config user.email`, and `gh api /user --jq .login` (if gh available)
@@ -569,7 +573,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 3. **Launch `pr-assembler` agent** (sonnet):
    - `subagent_type`: `compozy:pr-assembler`
    - `model`: `sonnet`
-   - Provide: tech spec, task manifest, review results, file list, artifact preference, **and the pre-determined `$BRANCH_NAME` from the checkpoint**
+   - Provide: tech spec, task manifest, review results, file list, artifact preference, **the pre-determined `$BRANCH_NAME` from the checkpoint**, and the external ticket URL if provided via `--ex-ticket`
 
 4. The pr-assembler will:
    - Create a feature branch using `$BRANCH_NAME` (the branch name determined in Phase 0)

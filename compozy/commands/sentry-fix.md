@@ -1,6 +1,6 @@
 ---
 description: Fix Sentry issues — discover, analyze with rich context, find root cause, fix with TDD, verify, and resolve
-argument-hint: "[Sentry issue ID, URL, or search query] [--auto] [--team] [--worktree] [--repo=name] [--pr]"
+argument-hint: "[Sentry issue ID, URL, or search query] [--auto] [--team] [--worktree] [--repo=name] [--pr] [--ex-ticket=<url>]"
 allowed-tools:
   - Read
   - Write
@@ -51,6 +51,7 @@ If you haven't completed Phase 2 (Deep Sentry Analysis) and Phase 3 (Root Cause 
 - `--worktree` → Run in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before investigation begins. The worktree branch is named `fix/<issue-slug>`.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=backend` will `cd backend` first.
 - `--pr` → After fixing the bug, automatically create a branch (if not already on one), commit, push, and open a pull request. Runs Phase 6 (PR & Resolution) after Phase 5. Implies committing the fix.
+- `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url` and included in the PR description if a PR is created.
 
 ## Working Directory
 
@@ -97,6 +98,7 @@ Parse the user's input from `$ARGUMENTS`:
 
 6. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
     - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
     - `schema_version`: `"1.0.0"`
     - `command`: `"sentry-fix"`
     - `status`: `"in_progress"`
@@ -106,7 +108,8 @@ Parse the user's input from `$ARGUMENTS`:
     - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
     - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
     - `input`: `{ type: "sentry_issue", source: "<issue-id-or-query>", title: "<issue-title>" }`
-    - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `flags`: `{ auto, team, worktree, repo, pr, ex_ticket }`
+    - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 6, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "sentry-fix" }, summary: "Phase 0 — Setup complete" }`
     - `sentry`: `{ issue_id: "<id>", short_id: "<PROJECT-ABC>", url: "<sentry-url>" }` — populated from parsed input (fill in what's available, leave null for unknown fields)
@@ -421,6 +424,7 @@ Apply the `compozy:verification` skill:
       gh pr create --title "fix: [short description]" --body "$(cat <<'EOF'
       ## Summary
       - **Sentry issue**: [ID] — [Title]
+      [If --ex-ticket was provided: `- **External ticket**: <url>`]
       - **Root cause**: [1-line root cause]
       - **Fix**: [1-line fix description]
       - **Impact**: [events count] events, [users count] users affected

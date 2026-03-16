@@ -70,7 +70,7 @@ To get the latest version of a specific plugin:
 
 ## Available Plugins
 
-### compozy `v2.6.0`
+### compozy `v2.7.0`
 
 Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. Supports Jira ticket-driven and Sentry error-driven workflows.
 
