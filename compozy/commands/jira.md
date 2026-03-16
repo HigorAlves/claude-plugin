@@ -1,6 +1,6 @@
 ---
 description: Jira ticket-driven development — discover, analyze, investigate/design, implement with TDD, verify against acceptance criteria, and resolve
-argument-hint: "[Jira ticket ID, URL, JQL query, or search text] [--auto] [--team] [--worktree] [--repo=name] [--pr]"
+argument-hint: "[Jira ticket ID, URL, JQL query, or search text] [--auto] [--team] [--worktree] [--repo=name] [--pr] [--ex-ticket=<url>]"
 allowed-tools:
   - Read
   - Write
@@ -51,6 +51,7 @@ If you haven't completed Phase 2 (Deep Ticket Analysis) and Phase 3 (Investigati
 - `--worktree` → Run in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before investigation begins.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting. Example: `--repo=backend` will `cd backend` first.
 - `--pr` → After implementation, automatically create a branch (if not already on one), commit, push, and open a pull request. Runs Phase 6 (PR & Ticket Resolution) after Phase 5. Implies committing the changes.
+- `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url` and included in the PR description if a PR is created.
 
 ## Working Directory
 
@@ -121,6 +122,7 @@ Jira workflows are configurable per project. To transition a ticket:
 
 6. **Create `$COMPOZY_DIR/compozy.json`** — the per-orchestration detail file with:
     - `session_id`: generate a UUID (`uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`)
+    - `claude_session_id`: capture from `python3 -c "import json; print(json.load(open('$HOME/.claude/sessions/' + str($PPID) + '.json')).get('sessionId', ''))" 2>/dev/null`. If the command fails or returns empty, store `null`. This enables resuming the Claude Code session later via `claude --resume <id>`.
     - `schema_version`: `"1.0.0"`
     - `command`: `"jira"`
     - `status`: `"in_progress"`
@@ -131,6 +133,7 @@ Jira workflows are configurable per project. To transition a ticket:
     - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
     - `input`: `{ type: "jira_ticket", source: "<TICKET-KEY>", title: "<ticket-summary>" }`
     - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 6, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "jira" }, summary: "Phase 0 — Setup complete" }`
     - `jira`: `{ ticket_key: "<KEY>", flow: "<bug|story>", url: "<jira-url>" }` — populated from parsed input (fill in what's available at this point; `flow` is set after type detection in Phase 1)
@@ -499,6 +502,7 @@ Apply the `compozy:verification` skill:
       gh pr create --title "<type>: [short description]" --body "$(cat <<'EOF'
       ## Summary
       - **Jira ticket**: [KEY] — [Summary]
+      [If --ex-ticket was provided: `- **External ticket**: <url>`]
       - **Type**: [Bug fix / Feature]
       - **Description**: [1-line description of changes]
 

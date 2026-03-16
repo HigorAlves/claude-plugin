@@ -37,6 +37,7 @@ You will receive:
 - List of all created/modified files
 - Whether to include `compozy/` artifacts in the commit
 - **The pre-determined branch name** (`$BRANCH_NAME`) from Phase 0 — use this instead of generating a new one
+- External ticket URL (if provided via `--ex-ticket`)
 
 ## Process
 
@@ -80,6 +81,8 @@ Rules:
 ## Summary
 
 [2-3 sentences: what this PR does and why]
+
+[If external ticket URL was provided: `**External ticket**: [URL]`]
 
 ## Changes
 

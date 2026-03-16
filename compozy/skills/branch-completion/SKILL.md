@@ -77,9 +77,15 @@ Then: Cleanup worktree (Step 5)
 
 ```bash
 git push -u origin <feature-branch>
+```
+
+Before creating the PR, check if `compozy/<branch>/files/compozy.json` exists and contains `external_ticket.url`. If so, include `**External ticket**: <url>` in the PR summary.
+
+```bash
 gh pr create --title "<title>" --body "$(cat <<'EOF'
 ## Summary
 <2-3 bullets of what changed>
+[If external_ticket.url exists in compozy.json: `**External ticket**: <url>`]
 
 ## Test Plan
 - [ ] <verification steps>
