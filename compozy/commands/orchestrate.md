@@ -117,7 +117,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
     - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
     - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
     - `input`: `{ type, source, resolved_url (if applicable), title }`
-    - `flags`: `{ auto, team, worktree, repo, pr, ex_ticket }`
+    - `flags`: `{ auto, team, worktree, repo, pr }`
     - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "orchestrate" }, summary: "Phase 0 — Setup complete" }`
