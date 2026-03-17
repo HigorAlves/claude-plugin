@@ -24,7 +24,7 @@ The main pipeline. Takes a product requirement and produces a pull request.
 | 3 | Tech Spec | **Always** | Generate implementation-ready spec (user must approve) |
 | 4 | Task Decomposition | Yes* | Break spec into TDD-structured parallel tasks |
 | 5 | Task Execution | No | Execute tasks wave-by-wave with TDD + status handling |
-| 6 | Integration & Review | **Always** | Two-stage review: spec compliance → code quality |
+| 6 | Integration & Review | **Always** | Three-stage review: spec compliance → code quality → QA validation |
 | 7 | PR Generation | No | Verify tests, create branch, commit, push, open PR |
 
 *With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 3 adds spec critic + testability reviewer, Phase 4 adds dependency auditor + complexity estimator, and Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
@@ -201,6 +201,7 @@ Each step is independent. You can:
 | `requirements-checker` | sonnet | Verify PR implements ticket requirements |
 | `sentry-analyzer` | opus | Extract and synthesize Sentry issue data into structured reports |
 | `jira-analyzer` | opus | Extract and synthesize Jira ticket data into structured reports |
+| `qa-validator` | sonnet | Validate acceptance criteria, run regression checks, write missing tests |
 
 ## Skills
 

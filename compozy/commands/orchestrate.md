@@ -479,7 +479,26 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - Provide: tech spec, file list, codebase conventions
    - Reviews: code quality, architecture, testing, robustness
 
-3. **Consolidate findings** from both stages into severity categories:
+3. **Stage 3 — QA Validation** (only after Stage 2 passes):
+
+   Launch `qa-validator` agent (sonnet):
+   - `subagent_type`: `compozy:qa-validator`
+   - `model`: `sonnet`
+   - Provide: tech spec, task manifest, all file paths, codebase conventions, progress notes
+
+   The qa-validator runs a 5-phase workflow:
+   - Discovers existing test patterns and framework
+   - Validates each acceptance criterion against the implementation
+   - Runs the existing test suite to detect regressions
+   - Writes missing tests following repo patterns (if tests exist)
+   - Runs the full suite again to verify everything passes
+
+   If qa-validator finds:
+   - **Unmet acceptance criteria** → launch `task-implementer` to fix, then re-run `qa-validator`
+   - **New regressions** → launch `task-implementer` to fix, then re-run `qa-validator`
+   - **Test gaps** → qa-validator writes tests itself (no re-dispatch needed)
+
+4. **Consolidate findings** from all stages into severity categories:
    ```
    ## Review Results
 
@@ -496,7 +515,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - [Any cross-component problems from integration-validator]
    ```
 
-4. **Gate** (skip if `--auto`) — present consolidated review, then use `AskUserQuestion`:
+5. **Gate** (skip if `--auto`) — present consolidated review, then use `AskUserQuestion`:
    ```
    AskUserQuestion:
      question: "How would you like to proceed with the review findings?"
@@ -516,7 +535,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - If "Abort": clean up and exit
    - If `--auto`: fix all critical and moderate issues, then proceed
 
-5. Update checkpoint:
+6. Update checkpoint:
 ```markdown
 **Phase**: 6 — Review
 **Status**: complete
@@ -526,7 +545,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 ```
 
 **Update compozy.json**:
-- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `6`. Add Phase 6 to `pipeline.phases` with `{ number: 6, name: "Review", status: "complete", started_at, completed_at }`. Add review agents to `contributors.agents`: `integration-validator` (sonnet, phase 6), `spec-compliance-reviewer` (sonnet, phase 6), `code-quality-reviewer` (sonnet, phase 6). Update `updated_at`.
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `6`. Add Phase 6 to `pipeline.phases` with `{ number: 6, name: "Review", status: "complete", started_at, completed_at }`. Add review agents to `contributors.agents`: `integration-validator` (sonnet, phase 6), `spec-compliance-reviewer` (sonnet, phase 6), `code-quality-reviewer` (sonnet, phase 6), `qa-validator` (sonnet, phase 6). Update `updated_at`.
 - Central registry (`compozy/compozy.json`): Update this orchestration's `current_phase` to `6`, `progress` to `"Review complete"`, `updated_at` to now.
 
 ---
