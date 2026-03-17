@@ -70,7 +70,7 @@ To get the latest version of a specific plugin:
 
 ## Available Plugins
 
-### compozy `v2.9.0`
+### compozy `v3.0.0`
 
 Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. Supports Jira ticket-driven and Sentry error-driven workflows.
 
@@ -85,7 +85,7 @@ Full-lifecycle development orchestration — design, plan, implement with TDD, r
 | `/code-review` | Review a GitHub PR — checks code quality, test coverage, and requirements alignment |
 | `/pr-respond` | Address PR review feedback — read comments, fix code, reply to threads, push changes |
 | `/debug` | Systematic debugging — find root cause before fixing, with structured investigation phases |
-| `/jira` | Jira ticket-driven development — discover, analyze, implement with TDD, verify, and resolve |
+| `/jira` | Jira ticket triage — analyze, investigate codebase, enrich ticket with findings and AC, prepare for orchestration |
 | `/sentry-fix` | Fix Sentry issues — discover, analyze with rich context, find root cause, fix with TDD, verify, and resolve |
 | `/finish` | Complete a development branch — verify tests, present integration options, execute choice, cleanup |
 | `/resume` | Resume an interrupted orchestration from the last checkpoint |

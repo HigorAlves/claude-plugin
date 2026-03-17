@@ -112,9 +112,9 @@ Fix production errors from Sentry — discover, analyze, find root cause, fix wi
 
 **Requires:** Sentry MCP server (`sentry@claude-plugins-official`)
 
-### `/compozy:jira [ticket] [--auto] [--team] [--worktree] [--repo=name] [--pr]`
+### `/compozy:jira [ticket] [--auto] [--team] [--repo=name]`
 
-Jira ticket-driven development — the ticket IS the unit of work. Routes to different flows based on ticket type (Bug → debug, Story/Task → spec).
+Jira ticket triage — analyze, investigate, and enrich tickets before implementation. Does NOT write code. Updates the ticket on Jira with findings and acceptance criteria so stakeholders can validate before development starts.
 
 **Input sources:**
 - Ticket key: `/compozy:jira PROJ-1234`
@@ -127,15 +127,17 @@ Jira ticket-driven development — the ticket IS the unit of work. Routes to dif
 
 | Phase | Name | Gate | Description |
 |-------|------|------|-------------|
-| 0 | Setup | - | Repo selection, worktree, branch prefix from ticket type |
-| 1 | Ticket Discovery | Yes* | Parse input, fetch via Jira MCP, confirm, transition → In Progress |
-| 2 | Deep Ticket Analysis | No | Gather description, AC, linked issues, subtasks, comments, sprint/epic |
-| 3 | Investigation | Yes* | Bug: root cause investigation. Story: codebase discovery + spec |
-| 4 | Implementation | Yes* | Bug: TDD fix. Story: task decomposition + wave execution |
-| 5 | Verification Audit | No | Run tests + verify each acceptance criterion from ticket |
-| 6 | PR & Ticket Resolution | No | Create PR, add Jira comment, transition → In Review |
+| 0 | Setup | - | Repo selection, create compozy dir |
+| 1 | Ticket Discovery & Analysis | Yes* | Fetch ticket, deep analysis with jira-analyzer, present findings |
+| 2 | Codebase Investigation | No | Bug: trace affected code. Story: explore architecture and similar features |
+| 3 | Ticket Enrichment & Handoff | Yes* | Generate AC if missing, post triage comment, save handoff for orchestrate |
 
-*With `--auto`, ALL gates are skipped. With `--team`, Phase 2 dispatches 3 collaborative agents (Bug Investigation Team or Story Planning Team based on ticket type). With `--pr`, Phase 6 creates a PR and pushes.
+*With `--auto`, ALL gates are skipped. With `--team`, Phase 1 dispatches 3 collaborative agents (Bug Investigation Team or Story Planning Team based on ticket type).
+
+**After triage**, implement with:
+```
+/compozy:orchestrate <triage-summary.md> --jira-sync=PROJ-1234
+```
 
 **Requires:** Jira MCP server (Atlassian Remote MCP or `mcp-atlassian`)
 
@@ -179,7 +181,7 @@ Each step is independent. You can:
 - `design` without building (explore ideas)
 - `plan` without the full pipeline (prepare for manual implementation)
 - `orchestrate` from a PRD directly (skip design/plan if requirements are clear)
-- `jira` from a Jira ticket (ticket-driven development with lifecycle management)
+- `jira` from a Jira ticket (triage and enrich before implementation)
 - `code-review` any PR (standalone reviews)
 - `pr-respond` to address review feedback on your PR
 - `debug` any issue (standalone debugging)
@@ -336,83 +338,82 @@ Their findings are synthesized into a single root cause hypothesis. Then:
 
 ### Jira Ticket (bug)
 
-For bugs tracked in Jira — the ticket drives the investigation and fix:
+For bugs tracked in Jira — triage, investigate root cause, and enrich the ticket:
 
 ```
 /compozy:jira PROJ-1234
 ```
 
-This detects the ticket type (Bug) and routes to the debug flow:
+This detects the ticket type (Bug) and runs the triage flow:
 1. **Ticket analysis** — gather description, AC, linked issues, comments, sprint context
-2. **Root cause investigation** — systematic debugging from ticket evidence
-3. **TDD fix** — failing test → green → refactor
-4. **Acceptance criteria verification** — check each AC from the ticket
+2. **Codebase investigation** — trace the bug through affected code, analyze git history, form root cause hypothesis
+3. **Ticket enrichment** — generate acceptance criteria if missing, post triage comment with findings
 
-End-to-end with PR and ticket transitions:
+Then implement when ready:
 ```
-/compozy:jira PROJ-1234 --pr                → fix + PR + transition to In Review
-/compozy:jira PROJ-1234 --auto --pr         → fully autonomous: analyze → fix → PR → Done
-/compozy:jira PROJ-1234 --auto --team --pr  → team investigation + autonomous fix
+/compozy:orchestrate compozy/proj-1234/files/triage-summary.md --jira-sync=PROJ-1234
 ```
 
 ### Jira Ticket (story/task)
 
-For stories and tasks tracked in Jira — the ticket drives spec generation and implementation:
+For stories and tasks tracked in Jira — triage, explore architecture impact, and enrich:
 
 ```
 /compozy:jira PROJ-5678
 ```
 
-This detects the ticket type (Story) and routes to the spec flow:
+This detects the ticket type (Story) and runs the triage flow:
 1. **Ticket analysis** — gather description, AC, linked issues, subtasks, comments
-2. **Codebase discovery + spec generation** — explore codebase, generate spec from ticket requirements
-3. **Task decomposition + wave execution** — parallel TDD implementation
-4. **Acceptance criteria verification** — check each AC from the ticket
+2. **Codebase investigation** — explore architecture, find similar features, estimate complexity
+3. **Ticket enrichment** — generate acceptance criteria if missing, post triage comment with approach
 
+Then implement when ready:
 ```
-/compozy:jira PROJ-5678 --pr               → implement + PR + transition to In Review
-/compozy:jira PROJ-5678 --auto --pr        → fully autonomous end-to-end
-/compozy:jira "login page broken"          → search Jira and pick a ticket
+/compozy:orchestrate compozy/proj-5678/files/triage-summary.md --jira-sync=PROJ-5678
+```
+
+**Other ways to start:**
+```
+/compozy:jira "login page broken"          → search Jira and pick a ticket to triage
 /compozy:jira                               → interactive: prompted for ticket
+/compozy:jira PROJ-1234 --auto             → fully autonomous triage (no gates)
+/compozy:jira PROJ-1234 --team             → team investigation for richer analysis
 ```
 
 ### Ticket Triage (analyze → enrich → build later)
 
-When a ticket lands in your backlog and needs investigation before it's ready for development. Triage it, update Jira with your findings, and orchestrate when the time is right.
+When a ticket lands in your backlog and needs investigation before it's ready for development. This is exactly what `/compozy:jira` is built for — it triages, enriches, and prepares without writing any code.
 
-**Step 1: Analyze the ticket**
+**Step 1: Triage the ticket**
 ```
 /compozy:jira PROJ-1234
 ```
-The deep ticket analysis (Phase 2) gathers description, AC, linked issues, subtasks, comments, and sprint/epic context. At the Phase 3 gate, choose **"Abort"** — you're triaging, not implementing yet.
+1. Analyzes the ticket deeply (description, AC, linked issues, comments, sprint context)
+2. Investigates the codebase (affected files, architecture impact, complexity estimate)
+3. Generates acceptance criteria if the ticket doesn't have them
+4. Posts a triage comment on Jira with technical findings
+5. Saves a `triage-summary.md` handoff file locally
 
-**Step 2: Update the ticket with findings**
+**Step 2: Stakeholders review**
 
-Use the Atlassian MCP tools directly to enrich the ticket with what you learned:
-```
-Ask Claude to update the ticket description with clearer acceptance criteria,
-add missing requirements discovered during analysis, or add a comment
-summarizing the investigation findings.
-```
-
-For example:
-- "Update PROJ-1234 with the acceptance criteria we identified"
-- "Add a comment to PROJ-1234 summarizing the technical investigation"
-- "Update the description of PROJ-1234 with the refined requirements"
+The triage comment on Jira gives your team visibility into the technical analysis. They can:
+- Confirm or adjust the acceptance criteria
+- Flag missing requirements
+- Reprioritize based on complexity
 
 **Step 3: Build when ready**
 
 When the ticket is refined and prioritized, come back and implement:
 ```
-/compozy:jira PROJ-1234 --pr                          # ticket-driven, creates PR
-/compozy:orchestrate "requirements text" --jira-sync=PROJ-1234  # sync progress to Jira
+/compozy:orchestrate compozy/proj-1234/files/triage-summary.md --jira-sync=PROJ-1234
 ```
+The orchestration pipeline loads the full triage context and syncs progress back to Jira.
 
-**Shortcut for quick triage:**
+**For richer analysis, use `--team`:**
 ```
-/compozy:jira PROJ-1234 --team   # team investigation gives the richest analysis
+/compozy:jira PROJ-1234 --team
 ```
-The team dispatches 3 agents in parallel (Ticket Context Analyst, Codebase Explorer, Requirements Analyst), giving you a comprehensive picture before you decide whether to proceed or stop and refine the ticket.
+Dispatches 3 agents in parallel (Ticket Context Analyst, Codebase Explorer, Requirements Analyst) for a comprehensive picture before enriching the ticket.
 
 ### Orchestrate with Jira Progress Tracking
 
@@ -503,7 +504,7 @@ Generate, view, or edit specs without running the full pipeline:
 | Feature with Jira board visibility | `orchestrate` | `--jira-sync=PROJECT` |
 | Feature under existing Jira ticket | `orchestrate` | `--jira-sync=TICKET-KEY` |
 | Full autopilot + Jira tracking | `orchestrate` | `--auto --jira-sync=PROJECT` |
-| Triage a ticket before building | `jira` (stop at gate) → update Jira → `orchestrate` | `--jira-sync=TICKET` |
+| Triage a ticket before building | `jira` → `orchestrate` | `--jira-sync=TICKET` |
 | Simple bug, clear reproduction | `debug` | `--pr` |
 | Simple bug, fully autonomous | `debug` | `--auto --pr` |
 | Complex bug, multiple subsystems | `debug → code-review → finish` | `--team` |
@@ -511,10 +512,10 @@ Generate, view, or edit specs without running the full pipeline:
 | Production error from Sentry | `sentry-fix` | `--pr` |
 | Sentry error, fully autonomous | `sentry-fix` | `--auto --pr` |
 | Sentry error, team investigation | `sentry-fix` | `--team --pr` |
-| Jira bug ticket | `jira` | `--pr` |
-| Jira story/task ticket | `jira` | `--pr` |
-| Jira ticket, fully autonomous | `jira` | `--auto --pr` |
-| Jira ticket, team investigation | `jira` | `--team --pr` |
+| Jira bug ticket — triage | `jira` → `orchestrate` | `--jira-sync=TICKET` |
+| Jira story/task — triage | `jira` → `orchestrate` | `--jira-sync=TICKET` |
+| Jira ticket, autonomous triage | `jira` | `--auto` |
+| Jira ticket, rich team triage | `jira` | `--team` |
 | Exploring ideas, no implementation | `design` | |
 | Review someone's PR | `code-review` | |
 | Address review feedback on your PR | `pr-respond` | `--auto` |
@@ -532,9 +533,9 @@ Generate, view, or edit specs without running the full pipeline:
 - **Use `--auto` for fire-and-forget** — runs fully autonomously, no questions asked. Combine with `--worktree` and `--repo` for parallel work across repos
 - **Bug tickets don't need the full pipeline** — go straight to `/compozy:debug` → `/compozy:finish`
 - **Production errors from Sentry** — use `/compozy:sentry-fix` which fetches all Sentry context (stack traces, breadcrumbs, traces, tags) before investigating
-- **Jira ticket-driven development** — use `/compozy:jira PROJ-1234` to let the ticket drive the workflow. Bugs route to debug flow, stories route to spec flow. Manages ticket lifecycle (In Progress → In Review → Done)
+- **Jira ticket triage** — use `/compozy:jira PROJ-1234` to analyze and enrich tickets before implementation. It investigates the codebase, generates acceptance criteria if missing, and posts a triage comment on Jira for stakeholder review
 - **Jira progress tracking** — add `--jira-sync=WOR` to `/compozy:orchestrate` to create subtasks in Jira from the task manifest. Managers see real-time progress on their board as waves complete
-- **Ticket triage before building** — use `/compozy:jira PROJ-1234` to analyze a ticket deeply, stop at the gate, update the ticket with your findings, then come back with `/compozy:orchestrate --jira-sync=PROJ-1234` when ready
+- **Triage → Build flow** — triage with `/compozy:jira PROJ-1234`, let stakeholders review, then build with `/compozy:orchestrate <triage-summary.md> --jira-sync=PROJ-1234` when ready
 - **Use `--team` for complex work** — adds reviewer/architect agents to orchestrate, 3-agent investigation to debug
 - **Use `--worktree` for parallel work** — each command runs in its own isolated git worktree, so you can open multiple terminals and run different tasks simultaneously without file conflicts
 - **Use `--repo=name` from parent directories** — if you keep repos in `~/Developer/`, run compozy from there and point at the right repo: `--repo=Discover`
