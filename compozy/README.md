@@ -4,7 +4,7 @@ Full-lifecycle development orchestration for Claude Code. Design, plan, implemen
 
 ## Commands
 
-### `/compozy:orchestrate [PRD] [--auto] [--team] [--worktree] [--repo=name]`
+### `/compozy:orchestrate [PRD] [--auto] [--team] [--worktree] [--repo=name] [--jira-sync=<PROJECT|TICKET>]`
 
 The main pipeline. Takes a product requirement and produces a pull request.
 
@@ -23,11 +23,14 @@ The main pipeline. Takes a product requirement and produces a pull request.
 | 2 | Codebase Discovery | No | Explore architecture, patterns, conventions |
 | 3 | Tech Spec | **Always** | Generate implementation-ready spec (user must approve) |
 | 4 | Task Decomposition | Yes* | Break spec into TDD-structured parallel tasks |
+| 4.5 | Jira Sync | No** | Create Jira subtasks from task manifest for manager visibility |
 | 5 | Task Execution | No | Execute tasks wave-by-wave with TDD + status handling |
 | 6 | Integration & Review | **Always** | Three-stage review: spec compliance → code quality → QA validation |
 | 7 | PR Generation | No | Verify tests, create branch, commit, push, open PR |
 
-*With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 3 adds spec critic + testability reviewer, Phase 4 adds dependency auditor + complexity estimator, and Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
+*With `--auto`, ALL gates are skipped — the pipeline runs fully autonomously. With `--team`, Phase 3 adds spec critic + testability reviewer, Phase 4 adds dependency auditor + complexity estimator, Phase 4.5 adds mapping validator + dependency linker, and Phase 5 adds reviewer + architect agents per wave. With `--worktree`, Phase 0 creates an isolated git worktree. With `--repo=name`, changes into that repository directory first.
+
+**Phase 4.5 only runs if `--jira-sync` is set. It syncs the task manifest to Jira as subtasks, updates their status during Phase 5, and adds the PR link in Phase 7.
 
 ### `/compozy:design [topic] [--auto] [--worktree] [--repo=name]`
 
@@ -201,6 +204,7 @@ Each step is independent. You can:
 | `requirements-checker` | sonnet | Verify PR implements ticket requirements |
 | `sentry-analyzer` | opus | Extract and synthesize Sentry issue data into structured reports |
 | `jira-analyzer` | opus | Extract and synthesize Jira ticket data into structured reports |
+| `jira-sync` | sonnet | Create/update Jira tickets from task manifests for progress tracking |
 | `qa-validator` | sonnet | Validate acceptance criteria, run regression checks, write missing tests |
 
 ## Skills
@@ -240,6 +244,7 @@ compozy/
       task-manifest.md
       implementation-plan.md
       progress.md
+      jira-sync.json          # (if --jira-sync) task→ticket mapping
 ```
 
 ## Common Workflows
@@ -371,6 +376,74 @@ This detects the ticket type (Story) and routes to the spec flow:
 /compozy:jira                               → interactive: prompted for ticket
 ```
 
+### Ticket Triage (analyze → enrich → build later)
+
+When a ticket lands in your backlog and needs investigation before it's ready for development. Triage it, update Jira with your findings, and orchestrate when the time is right.
+
+**Step 1: Analyze the ticket**
+```
+/compozy:jira PROJ-1234
+```
+The deep ticket analysis (Phase 2) gathers description, AC, linked issues, subtasks, comments, and sprint/epic context. At the Phase 3 gate, choose **"Abort"** — you're triaging, not implementing yet.
+
+**Step 2: Update the ticket with findings**
+
+Use the Atlassian MCP tools directly to enrich the ticket with what you learned:
+```
+Ask Claude to update the ticket description with clearer acceptance criteria,
+add missing requirements discovered during analysis, or add a comment
+summarizing the investigation findings.
+```
+
+For example:
+- "Update PROJ-1234 with the acceptance criteria we identified"
+- "Add a comment to PROJ-1234 summarizing the technical investigation"
+- "Update the description of PROJ-1234 with the refined requirements"
+
+**Step 3: Build when ready**
+
+When the ticket is refined and prioritized, come back and implement:
+```
+/compozy:jira PROJ-1234 --pr                          # ticket-driven, creates PR
+/compozy:orchestrate "requirements text" --jira-sync=PROJ-1234  # sync progress to Jira
+```
+
+**Shortcut for quick triage:**
+```
+/compozy:jira PROJ-1234 --team   # team investigation gives the richest analysis
+```
+The team dispatches 3 agents in parallel (Ticket Context Analyst, Codebase Explorer, Requirements Analyst), giving you a comprehensive picture before you decide whether to proceed or stop and refine the ticket.
+
+### Orchestrate with Jira Progress Tracking
+
+Sync orchestration progress to Jira so managers can track from their board. Subtasks appear under a parent ticket, status updates as waves complete, and the PR link is added at the end.
+
+**With a new parent Story:**
+```
+/compozy:orchestrate "Add notification preferences" --jira-sync=WOR
+```
+Creates a Story in the WOR project, then creates subtasks for each task in the manifest.
+
+**Under an existing ticket:**
+```
+/compozy:orchestrate "Add notification preferences" --jira-sync=WOR-361
+```
+Adds subtasks under WOR-361 instead of creating a new parent.
+
+**Combined with other flags:**
+```
+/compozy:orchestrate #42 --auto --jira-sync=WOR           # autonomous + Jira visibility
+/compozy:orchestrate #42 --team --jira-sync=WOR-361       # team mode + Jira sync
+/compozy:orchestrate #42 --auto --team --jira-sync=WOR    # full autopilot + team + Jira
+```
+
+**What managers see in Jira:**
+1. After Phase 4.5: Parent Story with N subtasks, each labeled `wave-1`, `wave-2`, etc.
+2. During Phase 5: Subtasks transition to Done as waves complete
+3. After Phase 7: PR link comment on the parent ticket, parent transitions to In Review
+
+If Jira MCP is unavailable, the pipeline warns and continues without syncing (non-blocking).
+
 ### Exploring Ideas (no implementation)
 
 When you want to brainstorm without committing to building anything:
@@ -427,6 +500,10 @@ Generate, view, or edit specs without running the full pipeline:
 | Complex feature, unclear requirements | `design → plan → orchestrate` | |
 | Feature with clear requirements | `orchestrate` | `--auto` |
 | High-stakes feature, need extra review | `design → plan → orchestrate` | `--team` |
+| Feature with Jira board visibility | `orchestrate` | `--jira-sync=PROJECT` |
+| Feature under existing Jira ticket | `orchestrate` | `--jira-sync=TICKET-KEY` |
+| Full autopilot + Jira tracking | `orchestrate` | `--auto --jira-sync=PROJECT` |
+| Triage a ticket before building | `jira` (stop at gate) → update Jira → `orchestrate` | `--jira-sync=TICKET` |
 | Simple bug, clear reproduction | `debug` | `--pr` |
 | Simple bug, fully autonomous | `debug` | `--auto --pr` |
 | Complex bug, multiple subsystems | `debug → code-review → finish` | `--team` |
@@ -456,6 +533,8 @@ Generate, view, or edit specs without running the full pipeline:
 - **Bug tickets don't need the full pipeline** — go straight to `/compozy:debug` → `/compozy:finish`
 - **Production errors from Sentry** — use `/compozy:sentry-fix` which fetches all Sentry context (stack traces, breadcrumbs, traces, tags) before investigating
 - **Jira ticket-driven development** — use `/compozy:jira PROJ-1234` to let the ticket drive the workflow. Bugs route to debug flow, stories route to spec flow. Manages ticket lifecycle (In Progress → In Review → Done)
+- **Jira progress tracking** — add `--jira-sync=WOR` to `/compozy:orchestrate` to create subtasks in Jira from the task manifest. Managers see real-time progress on their board as waves complete
+- **Ticket triage before building** — use `/compozy:jira PROJ-1234` to analyze a ticket deeply, stop at the gate, update the ticket with your findings, then come back with `/compozy:orchestrate --jira-sync=PROJ-1234` when ready
 - **Use `--team` for complex work** — adds reviewer/architect agents to orchestrate, 3-agent investigation to debug
 - **Use `--worktree` for parallel work** — each command runs in its own isolated git worktree, so you can open multiple terminals and run different tasks simultaneously without file conflicts
 - **Use `--repo=name` from parent directories** — if you keep repos in `~/Developer/`, run compozy from there and point at the right repo: `--repo=Discover`

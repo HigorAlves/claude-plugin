@@ -70,7 +70,7 @@ To get the latest version of a specific plugin:
 
 ## Available Plugins
 
-### compozy `v2.7.0`
+### compozy `v2.9.0`
 
 Full-lifecycle development orchestration — design, plan, implement with TDD, review, respond to feedback, and ship with engineering discipline. Supports Jira ticket-driven and Sentry error-driven workflows.
 
@@ -91,11 +91,11 @@ Full-lifecycle development orchestration — design, plan, implement with TDD, r
 | `/resume` | Resume an interrupted orchestration from the last checkpoint |
 | `/status` | Show pipeline status across all active orchestrations |
 
-**Agents (15):** spec-generator, task-decomposer, task-implementer, integration-validator, pr-assembler, prd-analyzer, jira-analyzer, sentry-analyzer, spec-compliance-reviewer, code-quality-reviewer, guidelines-reviewer, security-reviewer, requirements-checker, bug-hunter, test-analyzer
+**Agents (17):** spec-generator, task-decomposer, task-implementer, integration-validator, pr-assembler, prd-analyzer, jira-analyzer, jira-sync, sentry-analyzer, spec-compliance-reviewer, code-quality-reviewer, guidelines-reviewer, security-reviewer, requirements-checker, bug-hunter, test-analyzer, qa-validator
 
 **Skills (10):** tdd, systematic-debugging, verification, worktrees, parallel-agents, pr-review, branch-completion, spec-authoring, team-agents, using-compozy
 
-**Flags:** `--auto` (full autopilot), `--team` (collaborative agents), `--worktree` (parallel isolation), `--repo` (multi-repo support)
+**Flags:** `--auto` (full autopilot), `--team` (collaborative agents), `--worktree` (parallel isolation), `--repo` (multi-repo support), `--jira-sync` (Jira progress tracking)
 
 ---
 
@@ -189,7 +189,7 @@ Some plugins require MCP servers. Install the ones needed by the plugins you use
 
 **Which plugins need what:**
 
-- **compozy** — GitHub (orchestrate, resume, pr-respond, code-review), Sentry (sentry-fix), Jira (jira, code-review `--jira`)
+- **compozy** — GitHub (orchestrate, resume, pr-respond, code-review), Sentry (sentry-fix), Jira (jira, orchestrate `--jira-sync`, code-review `--jira`)
 - **issue-finder** — GitHub (fix-issue)
 - **pr-toolkit** — None
 - **commit-commands** — None

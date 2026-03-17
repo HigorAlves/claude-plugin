@@ -1,6 +1,6 @@
 ---
 description: Spec-driven development orchestration — analyze requirements, generate tech specs, decompose into parallel tasks, execute, review, and create PRs
-argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto] [--team] [--worktree] [--repo=name] [--ex-ticket=<url>]"
+argument-hint: "[PRD text, file path, or GitHub issue URL/number] [--auto] [--team] [--worktree] [--repo=name] [--ex-ticket=<url>] [--jira-sync=<PROJECT|TICKET>]"
 allowed-tools:
   - "Bash(gh issue view:*)"
   - "Bash(gh issue list:*)"
@@ -23,6 +23,8 @@ allowed-tools:
   - Task
   - AskUserQuestion
   - "mcp__plugin_github_github__*"
+  - "mcp__plugin_atlassian_atlassian__*"
+  - "mcp__jira_*"
 ---
 
 # Compozy: Spec-Driven Development Orchestration
@@ -70,6 +72,7 @@ Parse the user's input from `$ARGUMENTS`:
 - `--worktree` → Run the entire pipeline in an isolated git worktree. Creates a worktree using the `compozy:worktrees` skill before any work begins (Phase 0). This allows running multiple Claude instances on different tasks in parallel without file conflicts.
 - `--repo=<name>` → When running from a parent directory that contains multiple repositories, `cd` into the named repository before starting the pipeline. Example: `--repo=Discover` will `cd Discover` first. If the directory doesn't exist, report an error.
 - `--ex-ticket=<url>` → Associate an external ticket URL (Linear, Notion, internal tools, etc.) with this orchestration. Stored in `$COMPOZY_DIR/compozy.json` as `external_ticket.url` and included in the PR description if a PR is created.
+- `--jira-sync=<value>` → Sync task manifest to Jira for progress visibility. Value can be a project key (e.g., `WOR`) to create a new parent Story, or an existing ticket key (e.g., `WOR-361`) to add subtasks under it. Creates subtasks after Phase 4, updates status during Phase 5, adds PR link after Phase 7. Requires a Jira MCP server (`mcp__plugin_atlassian_atlassian__*` or `mcp__jira_*`).
 
 ---
 
@@ -100,6 +103,7 @@ Parse the user's input from `$ARGUMENTS`:
 **Compozy dir**: [resolved $COMPOZY_DIR path, e.g., compozy/feat-142-notification-prefs/files]
 **Auto mode**: [yes/no]
 **External ticket**: [url or "none"]
+**Jira sync**: [project key, ticket key, or "none"]
 **Started**: [timestamp]
 ```
 
@@ -117,7 +121,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
     - `workspace.worktree_path` / `workspace.main_repo_path` / `workspace.compozy_dir` / `workspace.compozy_dir_absolute`: resolved paths
     - `branch`: `{ name: "$BRANCH_NAME", created_from: "<branch-before-checkout>", sanitized: "<directory-name>" }`
     - `input`: `{ type, source, resolved_url (if applicable), title }`
-    - `flags`: `{ auto, team, worktree, repo, pr }`
+    - `flags`: `{ auto, team, worktree, repo, pr, jira_sync }`
     - `external_ticket`: `{ url: "<url>" }` if `--ex-ticket` was provided, otherwise omit
     - `pipeline`: `{ current_phase: 0, total_phases: 7, phases: [{ number: 0, name: "Setup", status: "complete", started_at, completed_at }] }`
     - `artifacts.checkpoint`: `{ path: "checkpoint.md", created_at, updated_at, size_bytes, created_by: { type: "command", name: "orchestrate" }, summary: "Phase 0 — Setup complete" }`
@@ -369,6 +373,56 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 
 ---
 
+## Phase 4.5: Jira Sync `[No gate — only runs if --jira-sync]`
+
+**Goal**: Create Jira tickets from the approved task manifest for progress tracking
+
+**Condition**: Only runs if `--jira-sync` flag is set. If the flag is not set, skip to Phase 5.
+
+**Actions**:
+1. **Verify Jira MCP availability** — attempt a lightweight call (`mcp__plugin_atlassian_atlassian__getVisibleJiraProjects` or `mcp__jira_*` equivalent). If no Jira MCP is available, warn the user and skip this phase (non-blocking).
+
+2. **Launch `jira-sync` agent** (sonnet) in **create mode**:
+   - `subagent_type`: `compozy:jira-sync`
+   - `model`: `sonnet`
+   - Provide:
+     - Mode: `create`
+     - Task manifest path: `$COMPOZY_DIR/task-manifest.md`
+     - Jira target: the `--jira-sync` value (project key or existing ticket key)
+     - Tech spec title: from `$COMPOZY_DIR/tech-spec.md`
+     - `$COMPOZY_DIR` path
+
+3. The agent will:
+   - Create a parent Story (if project key given) or use the existing ticket
+   - Create subtasks for each task in the manifest
+   - Create dependency links between subtasks
+   - Write `$COMPOZY_DIR/jira-sync.json` mapping file
+
+4. **If `--team` flag is also set**: Use the Jira Sync Validation Team pattern (see `compozy/skills/team-agents/references/jira-sync-team.md`). After the Ticket Creator finishes, dispatch the Mapping Validator and Dependency Linker agents in parallel to verify correctness. Fix any issues found.
+
+5. **Present summary to user**:
+   ```
+   ## Jira Sync
+
+   **Parent**: {ticket-key} — {feature name}
+   **Subtasks created**: {count}
+   **Dependency links**: {count}
+   ```
+
+6. Update checkpoint:
+```markdown
+**Phase**: 4.5 — Jira Sync
+**Status**: complete
+**Parent ticket**: {key}
+**Subtasks created**: {count}
+```
+
+**Update compozy.json**:
+- Detail file (`$COMPOZY_DIR/compozy.json`): Add `artifacts.jira_sync` with `{ path: "jira-sync.json", parent_ticket: "{key}", subtasks_created: {count}, created_at: "ISO-8601" }`. Add `jira-sync` to `contributors.agents` with `{ name: "jira-sync", model: "sonnet", phases: [4.5] }`. Update `updated_at`.
+- Central registry (`compozy/compozy.json`): Update this orchestration's `progress` to `"Jira synced ({count} subtasks)"`, `updated_at` to now.
+
+---
+
 ## Phase 5: Task Execution `[No gate]`
 
 **Goal**: Implement all tasks, wave by wave
@@ -426,12 +480,21 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
       - Notes: [any issues or concerns]
       ```
 
-   d. **Handle failures**:
+   d. **Jira sync** (if `--jira-sync`):
+      - Read `$COMPOZY_DIR/jira-sync.json`
+      - Launch `jira-sync` agent (sonnet) in **update mode**:
+        - `subagent_type`: `compozy:jira-sync`
+        - `model`: `sonnet`
+        - Provide: jira-sync.json path, wave number, completed task IDs and their statuses from progress.md
+      - Agent transitions Jira subtasks to Done for completed tasks
+      - Agent adds comments on failed/blocked tasks with the reason
+
+   e. **Handle failures**:
       - If a task fails or remains blocked after re-dispatch: log the failure, mark dependents as "skipped"
       - Continue with independent tasks in the same wave
       - Report all failures in Phase 6
 
-   e. **Save checkpoint** after each wave:
+   f. **Save checkpoint** after each wave:
       ```markdown
       **Phase**: 5 — Execution
       **Status**: in_progress
@@ -600,7 +663,15 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    - Push to remote
    - Create the PR
 
-5. **Present final summary**:
+5. **Jira finalization** (if `--jira-sync`):
+   - Launch `jira-sync` agent (sonnet) in **finalize mode**:
+     - `subagent_type`: `compozy:jira-sync`
+     - `model`: `sonnet`
+     - Provide: jira-sync.json path, PR URL from pr-assembler output
+   - Agent adds PR link comment to parent ticket
+   - Agent transitions parent to "In Review" if the transition is available
+
+6. **Present final summary**:
    ```
    ## Orchestration Complete
 
@@ -620,7 +691,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
    [Path to tech spec if included in commit, or note that it's in $COMPOZY_DIR/]
    ```
 
-6. Update checkpoint:
+7. Update checkpoint:
 ```markdown
 **Phase**: 7 — PR Generation
 **Status**: complete
@@ -630,7 +701,7 @@ Write to `$COMPOZY_DIR/checkpoint.md`.
 ```
 
 **Update compozy.json**:
-- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `7`. Set `status` to `"complete"`. Add Phase 7 to `pipeline.phases` with `{ number: 7, name: "PR Generation", status: "complete", started_at, completed_at }`. Add `pr-assembler` to `contributors.agents` with `{ name: "pr-assembler", model: "sonnet", phases: [7] }`. Update `updated_at`.
+- Detail file (`$COMPOZY_DIR/compozy.json`): Set `pipeline.current_phase` to `7`. Set `status` to `"complete"`. Add Phase 7 to `pipeline.phases` with `{ number: 7, name: "PR Generation", status: "complete", started_at, completed_at }`. Add `pr-assembler` to `contributors.agents` with `{ name: "pr-assembler", model: "sonnet", phases: [7] }`. If `--jira-sync` was used, add `jira-sync` finalizer to `contributors.agents`. Update `updated_at`.
 - Central registry (`compozy/compozy.json`): Set `status` to `"complete"`, `current_phase` to `7`, `progress` to `"PR #[number] created"`, `updated_at` to now.
 
 ---
